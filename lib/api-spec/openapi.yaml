@@ -11,6 +11,63 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /books:
+    get:
+      operationId: listBooks
+      summary: Bilingual curated catalogue
+      responses:
+        "200":
+          description: Catalogue
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Book" }
+  /orders:
+    post:
+      operationId: createOrder
+      summary: Submit a demo order without charging
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrderInput" }
+      responses:
+        "201":
+          description: Demo confirmation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrderConfirmation" }
+  /quotes:
+    post:
+      operationId: createQuote
+      summary: Record an institutional quotation request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteInput" }
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Receipt" }
+  /openai/assistant:
+    post:
+      operationId: askAssistant
+      summary: Catalogue and shipping assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssistantInput" }
+      responses:
+        "200":
+          description: Assistant answer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantAnswer" }
   /healthz:
     get:
       operationId: healthCheck
@@ -26,6 +83,94 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    LocalizedText:
+      type: object
+      required: [ar, en]
+      properties:
+        ar: { type: string }
+        en: { type: string }
+    Book:
+      type: object
+      required: [id, title, author, category, level, pages, binding, description, price, color, featured]
+      properties:
+        id: { type: integer }
+        title: { $ref: "#/components/schemas/LocalizedText" }
+        author: { $ref: "#/components/schemas/LocalizedText" }
+        category: { type: string }
+        level: { type: string, enum: [beginner, intermediate, advanced] }
+        pages: { type: integer }
+        binding: { $ref: "#/components/schemas/LocalizedText" }
+        description: { $ref: "#/components/schemas/LocalizedText" }
+        price: { type: number }
+        color: { type: string }
+        featured: { type: boolean }
+    OrderItem:
+      type: object
+      required: [bookId, quantity]
+      properties:
+        bookId: { type: integer }
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+    OrderInput:
+      type: object
+      additionalProperties: false
+      required: [name, email, phone, country, city, address, paymentMethod, items]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        email: { type: string, format: email }
+        phone: { type: string, minLength: 7, maxLength: 25 }
+        country: { type: string, enum: [KW, SA, AE, QA, BH, OM] }
+        city: { type: string, minLength: 2, maxLength: 100 }
+        address: { type: string, minLength: 5, maxLength: 500 }
+        paymentMethod: { type: string, enum: [knet, card, myfatoorah, stripe] }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/OrderItem" }
+    OrderConfirmation:
+      type: object
+      required: [orderNumber, subtotal, shipping, total, demo]
+      properties:
+        orderNumber: { type: string }
+        subtotal: { type: number }
+        shipping: { type: number }
+        total: { type: number }
+        demo: { type: boolean }
+    QuoteInput:
+      type: object
+      required: [organization, name, email, quantity, message]
+      properties:
+        organization: { type: string, minLength: 2, maxLength: 150 }
+        name: { type: string, minLength: 2, maxLength: 100 }
+        email: { type: string, format: email }
+        quantity: { type: integer, minimum: 10, maximum: 100000 }
+        message: { type: string, minLength: 5, maxLength: 3000 }
+    Receipt:
+      type: object
+      required: [reference]
+      properties:
+        reference: { type: string }
+    AssistantMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string, minLength: 1, maxLength: 2000 }
+    AssistantInput:
+      type: object
+      required: [language, messages]
+      properties:
+        language: { type: string, enum: [ar, en] }
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 16
+          items: { $ref: "#/components/schemas/AssistantMessage" }
+    AssistantAnswer:
+      type: object
+      required: [reply]
+      properties:
+        reply: { type: string }
     HealthStatus:
       type: object
       properties:

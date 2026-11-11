@@ -1,0 +1,1 @@
+- [Sifr product boundaries](sifr-product.md) — bilingual Islamic bookshop; simulated payments and catalogue-only AI advice, never fatwas.

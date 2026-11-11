@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "سِفْر | Sifr"
+description = "متجر كتب شرعية بالعربية والإنجليزية، مع كتالوج منتقى وسلة ومفضلة وإتمام طلب تجريبي ومساعد ذكي للقراءة."
+version = "1.0.0"
+id = "artifacts/sifr"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24866
+
+[services.development]
+run = "pnpm --filter @workspace/sifr run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sifr", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sifr/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24866"
+BASE_PATH = "/"
