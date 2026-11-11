@@ -23,7 +23,13 @@ export interface Book {
   id: number;
   title: LocalizedText;
   author: LocalizedText;
+  publisher: LocalizedText;
   category: string;
+  subcategory: string;
+  volumes: number;
+  volumeLabel: LocalizedText;
+  metadataProvisional: boolean;
+  isDemo: boolean;
   level: BookLevel;
   pages: number;
   binding: LocalizedText;
@@ -52,6 +58,26 @@ export const OrderInputCountry = {
   QA: 'QA',
   BH: 'BH',
   OM: 'OM',
+  SY: 'SY',
+  JO: 'JO',
+  LB: 'LB',
+  IQ: 'IQ',
+  PS: 'PS',
+  YE: 'YE',
+  EG: 'EG',
+  SD: 'SD',
+  LY: 'LY',
+  TN: 'TN',
+  DZ: 'DZ',
+  MA: 'MA',
+  MR: 'MR',
+  SO: 'SO',
+  DJ: 'DJ',
+  KM: 'KM',
+  TR: 'TR',
+  RU: 'RU',
+  'RU-DA': 'RU-DA',
+  'RU-CE': 'RU-CE',
 } as const;
 
 export type OrderInputPaymentMethod = typeof OrderInputPaymentMethod[keyof typeof OrderInputPaymentMethod];
@@ -103,28 +129,69 @@ export interface OrderConfirmation {
   demo: boolean;
 }
 
+export type QuoteInputEntityType = typeof QuoteInputEntityType[keyof typeof QuoteInputEntityType];
+
+
+export const QuoteInputEntityType = {
+  bookshop: 'bookshop',
+  publisher: 'publisher',
+  education: 'education',
+  charity: 'charity',
+  research: 'research',
+  distributor: 'distributor',
+} as const;
+
+export type QuoteInputContactMethod = typeof QuoteInputContactMethod[keyof typeof QuoteInputContactMethod];
+
+
+export const QuoteInputContactMethod = {
+  email: 'email',
+  whatsapp: 'whatsapp',
+  phone: 'phone',
+} as const;
+
 export interface QuoteInput {
-  /**
-     * @minLength 2
-     * @maxLength 150
-     */
-  organization: string;
+  entityType: QuoteInputEntityType;
   /**
      * @minLength 2
      * @maxLength 100
      */
   name: string;
-  email: string;
   /**
-     * @minimum 10
-     * @maximum 100000
+     * @minLength 2
+     * @maxLength 100
      */
-  quantity: number;
+  country: string;
+  contactMethod: QuoteInputContactMethod;
+  /**
+     * @minLength 5
+     * @maxLength 200
+     */
+  contact: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  cooperation: string;
   /**
      * @minLength 5
      * @maxLength 3000
      */
   message: string;
+}
+
+export type NewsletterInputLanguage = typeof NewsletterInputLanguage[keyof typeof NewsletterInputLanguage];
+
+
+export const NewsletterInputLanguage = {
+  ar: 'ar',
+  en: 'en',
+} as const;
+
+export interface NewsletterInput {
+  /** @maxLength 200 */
+  email: string;
+  language: NewsletterInputLanguage;
 }
 
 export interface Receipt {

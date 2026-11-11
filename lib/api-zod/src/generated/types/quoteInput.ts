@@ -5,24 +5,32 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { QuoteInputContactMethod } from './quoteInputContactMethod';
+import type { QuoteInputEntityType } from './quoteInputEntityType';
 
 export interface QuoteInput {
-  /**
-     * @minLength 2
-     * @maxLength 150
-     */
-  organization: string;
+  entityType: QuoteInputEntityType;
   /**
      * @minLength 2
      * @maxLength 100
      */
   name: string;
-  email: string;
   /**
-     * @minimum 10
-     * @maximum 100000
+     * @minLength 2
+     * @maxLength 100
      */
-  quantity: number;
+  country: string;
+  contactMethod: QuoteInputContactMethod;
+  /**
+     * @minLength 5
+     * @maxLength 200
+     */
+  contact: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  cooperation: string;
   /**
      * @minLength 5
      * @maxLength 3000

@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation } from 'wouter';
 import { Heart, Menu, Minus, Plus, Search, ShoppingBag, Trash2, X, Languages } from 'lucide-react';
-import { useListBooks, type Book } from '@workspace/api-client-react';
+import { getListBooksQueryKey, useListBooks, type Book } from '@workspace/api-client-react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { BookCover, Logo } from '@/components/brand';
-import { useBookActions } from '@/components/book-card';
+import { BookFlags, useBookActions } from '@/components/book-card';
+import { useBookMeta } from '@/lib/catalog';
 import { formatKWD, formatNum, useI18n, type TKey } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -40,7 +41,7 @@ export function Nav() {
     f(); window.addEventListener('scroll', f, { passive: true });
     return () => window.removeEventListener('scroll', f);
   }, []);
-  const links: [TKey, string][] = [['nav.home', 'top'], ['nav.books', 'books'], ['nav.categories', 'categories'], ['nav.institutions', 'institutions'], ['nav.contact', 'contact']];
+  const links: [TKey, string][] = [['nav.home', 'top'], ['nav.books', 'books'], ['nav.categories', 'categories'], ['nav.partners', 'partnerships'], ['nav.contact', 'contact']];
   const submit = (e: FormEvent) => { e.preventDefault(); setFilter({ q }); go('books'); setOpen(false); };
   const iconBtn = 'relative grid h-10 w-10 place-items-center text-[#1B2A41] transition-colors duration-300 hover:bg-[#1B2A41] hover:text-[#F6F1E7]';
   return (
@@ -139,8 +140,20 @@ function EmptyDrawer({ icon, title, body }: { icon: ReactNode; title: string; bo
 }
 
 export function useBooksById() {
-  const { data } = useListBooks();
+  const { data } = useListBooks({ query: { queryKey: getListBooksQueryKey() } });
   return useMemo(() => new Map((data ?? []).map((b) => [b.id, b])), [data]);
+}
+
+/** Once the live catalogue loads, drop retired/unknown ids from the saved cart and favourites. */
+export function CatalogueSync() {
+  const { data, isSuccess } = useListBooks({ query: { queryKey: getListBooksQueryKey() } });
+  const { prune } = useStore();
+  const pruneRef = useRef(prune);
+  pruneRef.current = prune;
+  useEffect(() => {
+    if (isSuccess && data && data.length > 0) pruneRef.current(new Set(data.map((b) => b.id)));
+  }, [data, isSuccess]);
+  return null;
 }
 
 export function CartDrawer() {
@@ -178,7 +191,7 @@ export function CartDrawer() {
               <div className="w-16 shrink-0"><BookCover book={book} size="sm" /></div>
               <div className="flex flex-1 flex-col">
                 <p className="text-sm font-medium leading-snug">{pick(book.title)}</p>
-                <p className="text-xs font-light text-muted-foreground">{pick(book.author)}</p>
+                <p className="text-xs font-light text-muted-foreground">{book.author.ar || book.author.en ? pick(book.author) : t('b.unknown')}</p>
                 <div className="mt-auto flex items-center justify-between pt-3">
                   <div className="flex items-center border border-[#1B2A41]/20" role="group" aria-label={t('cart.qty')}>
                     <button type="button" onClick={() => setQty(book.id, qty - 1)} disabled={qty <= 1} aria-label={t('cart.dec')} className="grid h-8 w-8 place-items-center transition-colors hover:bg-[#1B2A41] hover:text-[#F6F1E7] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-current" data-testid={`button-dec-${book.id}`}><Minus className="h-3 w-3" /></button>
@@ -218,7 +231,7 @@ export function FavDrawer() {
               </button>
               <div className="flex flex-1 flex-col">
                 <p className="text-sm font-medium">{pick(book.title)}</p>
-                <p className="text-xs font-light text-muted-foreground">{pick(book.author)}</p>
+                <p className="text-xs font-light text-muted-foreground">{book.author.ar || book.author.en ? pick(book.author) : t('b.unknown')}</p>
                 <div className="mt-auto flex items-center justify-between pt-3">
                   <span className="text-sm font-semibold tabular-nums">{formatKWD(book.price, lang)}</span>
                   <div className="flex gap-1">
@@ -239,6 +252,7 @@ export function QuickView() {
   const { t, pick, lang } = useI18n();
   const { quick, setQuick, favs } = useStore();
   const { addToCart, fav } = useBookActions();
+  const m = useBookMeta();
   const b = quick;
   return (
     <Dialog open={!!b} onOpenChange={(o) => !o && setQuick(null)}>
@@ -247,16 +261,21 @@ export function QuickView() {
           <div className="grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
             <div className="lattice bg-[#EFE7D6] p-10 md:p-12"><BookCover book={b} size="lg" /></div>
             <div className="flex flex-col p-7 md:p-10">
-              <span className="text-xs tracking-wider text-[#B8893B]">{t(`c.${b.category}` as TKey)}</span>
+              <span className="text-xs tracking-wider text-[#B8893B]">{m.category(b)}{m.sub(b) && ` / ${m.sub(b)}`}</span>
               <DialogTitle className="mt-2 text-2xl font-semibold leading-tight text-[#1B2A41] md:text-3xl">{pick(b.title)}</DialogTitle>
-              <p className="mt-1 font-light text-muted-foreground">{pick(b.author)}</p>
+              <p className="mt-1 font-light text-muted-foreground" data-testid="text-quick-author">{m.author(b)}</p>
+              <p className="text-sm font-light text-muted-foreground" data-testid="text-quick-publisher">{t('b.publisher')}: {m.publisher(b)}</p>
+              <BookFlags book={b} className="mt-3" />
               <DialogDescription className="mt-5 text-sm font-light leading-7 text-[#1B2A41]/85">{pick(b.description)}</DialogDescription>
               <dl className="mt-6 grid grid-cols-2 gap-px bg-[#1B2A41]/10 text-sm">
                 {[
-                  [t('b.category'), t(`c.${b.category}` as TKey)],
-                  [t('b.level'), t(`lv.${b.level}` as TKey)],
-                  [t('b.binding'), pick(b.binding)],
-                  [t('b.pages'), formatNum(b.pages, lang)],
+                  [t('b.author'), m.author(b)],
+                  [t('b.publisher'), m.publisher(b)],
+                  [t('b.category'), m.sub(b) || m.category(b)],
+                  [t('b.level'), t(`lv.${b.level}`)],
+                  [t('b.binding'), pick(b.binding) || t('b.tbd')],
+                  [t('b.pages'), b.pages > 0 ? formatNum(b.pages, lang) : t('b.tbd')],
+                  ...(m.volumes(b) ? [[t('b.volumes'), m.volumes(b)]] : []),
                 ].map(([k, v]) => (
                   <div key={k} className="bg-[#F6F1E7] p-3">
                     <dt className="text-[11px] text-muted-foreground">{k}</dt>
@@ -265,7 +284,7 @@ export function QuickView() {
                 ))}
               </dl>
               <div className="mt-8 flex items-center gap-3">
-                <span className="text-2xl font-semibold tabular-nums">{formatKWD(b.price, lang)}</span>
+                <span className="flex flex-col"><span className="text-2xl font-semibold tabular-nums">{formatKWD(b.price, lang)}</span><span className="text-[10px] text-muted-foreground">{t('b.demoPrice')}</span></span>
                 <button type="button" onClick={() => addToCart(b)} className="ms-auto bg-[#1B2A41] px-5 py-3 text-sm text-[#F6F1E7] transition-colors duration-300 hover:bg-[#B8893B] hover:text-[#1B2A41]" data-testid="button-quick-add">{t('b.add')}</button>
                 <button type="button" onClick={() => fav(b)} aria-pressed={favs.includes(b.id)} aria-label={favs.includes(b.id) ? t('b.unfav') : t('b.fav')} className="grid h-11 w-11 place-items-center border border-[#1B2A41]/30 transition-colors hover:border-[#B8893B] hover:text-[#B8893B]" data-testid="button-quick-fav">
                   <Heart className={cn('h-4 w-4', favs.includes(b.id) && 'fill-[#B8893B] text-[#B8893B]')} />
@@ -276,44 +295,5 @@ export function QuickView() {
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-export function Footer() {
-  const { t } = useI18n();
-  const go = useGoTo();
-  const { setAiOpen } = useStore();
-  return (
-    <footer className="relative bg-[#1B2A41] text-[#F6F1E7]">
-      <div className="gold-rule" />
-      <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 md:grid-cols-[2fr_1fr_1fr] md:px-8">
-        <div>
-          <Logo inverted />
-          <p className="mt-6 max-w-sm text-sm font-light leading-7 text-[#F6F1E7]/70">{t('foot.about')}</p>
-          <p className="mt-6 text-2xl font-light text-[#B8893B]">كتابٌ يفتح لك الطريق</p>
-        </div>
-        <div>
-          <h4 className="text-xs tracking-[0.2em] text-[#B8893B]">{t('foot.shop')}</h4>
-          <ul className="mt-5 space-y-3 text-sm font-light">
-            {([['nav.books', 'books'], ['nav.categories', 'categories'], ['best.title', 'bestsellers']] as [TKey, string][]).map(([k, id]) => (
-              <li key={id}><button type="button" onClick={() => go(id)} className="link-u text-[#F6F1E7]/80 hover:text-[#F6F1E7]" data-testid={`link-foot-${id}`}>{t(k)}</button></li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h4 className="text-xs tracking-[0.2em] text-[#B8893B]">{t('foot.help')}</h4>
-          <ul className="mt-5 space-y-3 text-sm font-light">
-            <li><button type="button" onClick={() => go('institutions')} className="link-u text-[#F6F1E7]/80 hover:text-[#F6F1E7]">{t('nav.institutions')}</button></li>
-            <li><button type="button" onClick={() => setAiOpen(true)} className="link-u text-[#F6F1E7]/80 hover:text-[#F6F1E7]">{t('ai.title')}</button></li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-[#F6F1E7]/10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-6 text-xs font-light text-[#F6F1E7]/50 md:flex-row md:justify-between md:px-8">
-          <span>{t('foot.demo')}</span>
-          <span>© {new Date().getFullYear()} {t('brand')} — {t('foot.rights')}</span>
-        </div>
-      </div>
-    </footer>
   );
 }

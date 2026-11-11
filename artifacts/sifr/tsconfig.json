@@ -15,6 +15,7 @@
     }
   },
   "references": [
+    { "path": "../../lib/sifr-data" },
     {
       "path": "../../lib/api-client-react"
     }

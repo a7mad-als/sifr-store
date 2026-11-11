@@ -21,7 +21,19 @@ export const ListBooksResponseItem = zod.object({
   "ar": zod.string(),
   "en": zod.string()
 }),
+  "publisher": zod.object({
+  "ar": zod.string(),
+  "en": zod.string()
+}),
   "category": zod.string(),
+  "subcategory": zod.string(),
+  "volumes": zod.number().int(),
+  "volumeLabel": zod.object({
+  "ar": zod.string(),
+  "en": zod.string()
+}),
+  "metadataProvisional": zod.boolean(),
+  "isDemo": zod.boolean(),
   "level": zod.enum(['beginner', 'intermediate', 'advanced']),
   "pages": zod.number().int(),
   "binding": zod.object({
@@ -64,7 +76,7 @@ export const CreateOrderBody = zod.object({
   "name": zod.string().min(createOrderBodyNameMin).max(createOrderBodyNameMax),
   "email": zod.string().email(),
   "phone": zod.string().min(createOrderBodyPhoneMin).max(createOrderBodyPhoneMax),
-  "country": zod.enum(['KW', 'SA', 'AE', 'QA', 'BH', 'OM']),
+  "country": zod.enum(['KW', 'SA', 'AE', 'QA', 'BH', 'OM', 'SY', 'JO', 'LB', 'IQ', 'PS', 'YE', 'EG', 'SD', 'LY', 'TN', 'DZ', 'MA', 'MR', 'SO', 'DJ', 'KM', 'TR', 'RU', 'RU-DA', 'RU-CE']),
   "city": zod.string().min(createOrderBodyCityMin).max(createOrderBodyCityMax),
   "address": zod.string().min(createOrderBodyAddressMin).max(createOrderBodyAddressMax),
   "paymentMethod": zod.enum(['knet', 'card', 'myfatoorah', 'stripe']),
@@ -86,14 +98,17 @@ export const CreateOrderResponse = zod.object({
 /**
  * @summary Record an institutional quotation request
  */
-export const createQuoteBodyOrganizationMin = 2;
-export const createQuoteBodyOrganizationMax = 150;
-
 export const createQuoteBodyNameMin = 2;
 export const createQuoteBodyNameMax = 100;
 
-export const createQuoteBodyQuantityMin = 10;
-export const createQuoteBodyQuantityMax = 100000;
+export const createQuoteBodyCountryMin = 2;
+export const createQuoteBodyCountryMax = 100;
+
+export const createQuoteBodyContactMin = 5;
+export const createQuoteBodyContactMax = 200;
+
+export const createQuoteBodyCooperationMin = 2;
+export const createQuoteBodyCooperationMax = 200;
 
 export const createQuoteBodyMessageMin = 5;
 export const createQuoteBodyMessageMax = 3000;
@@ -101,10 +116,12 @@ export const createQuoteBodyMessageMax = 3000;
 
 
 export const CreateQuoteBody = zod.object({
-  "organization": zod.string().min(createQuoteBodyOrganizationMin).max(createQuoteBodyOrganizationMax),
+  "entityType": zod.enum(['bookshop', 'publisher', 'education', 'charity', 'research', 'distributor']),
   "name": zod.string().min(createQuoteBodyNameMin).max(createQuoteBodyNameMax),
-  "email": zod.string().email(),
-  "quantity": zod.number().int().min(createQuoteBodyQuantityMin).max(createQuoteBodyQuantityMax),
+  "country": zod.string().min(createQuoteBodyCountryMin).max(createQuoteBodyCountryMax),
+  "contactMethod": zod.enum(['email', 'whatsapp', 'phone']),
+  "contact": zod.string().min(createQuoteBodyContactMin).max(createQuoteBodyContactMax),
+  "cooperation": zod.string().min(createQuoteBodyCooperationMin).max(createQuoteBodyCooperationMax),
   "message": zod.string().min(createQuoteBodyMessageMin).max(createQuoteBodyMessageMax)
 })
 
@@ -132,6 +149,23 @@ export const AskAssistantBody = zod.object({
 
 export const AskAssistantResponse = zod.object({
   "reply": zod.string()
+})
+
+
+/**
+ * @summary Save a newsletter subscription without sending email
+ */
+export const subscribeNewsletterBodyEmailMax = 200;
+
+
+
+export const SubscribeNewsletterBody = zod.object({
+  "email": zod.string().email().max(subscribeNewsletterBodyEmailMax),
+  "language": zod.enum(['ar', 'en'])
+})
+
+export const SubscribeNewsletterResponse = zod.object({
+  "reference": zod.string()
 })
 
 

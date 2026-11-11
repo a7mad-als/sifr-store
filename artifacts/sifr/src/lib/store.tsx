@@ -15,8 +15,10 @@ type Ctx = {
   favOpen: boolean; setFavOpen: (v: boolean) => void;
   quick: Book | null; setQuick: (b: Book | null) => void;
   aiOpen: boolean; setAiOpen: (v: boolean) => void;
-  filter: { category: string; q: string; nonce: number };
-  setFilter: (f: { category?: string; q?: string }) => void;
+  filter: { category: string; sub: string; q: string; nonce: number };
+  setFilter: (f: { category?: string; sub?: string; q?: string }) => void;
+  /** Drop cart/favourite ids that are not in the live catalogue (e.g. retired books). */
+  prune: (valid: Set<number>) => void;
 };
 const StoreCtx = createContext<Ctx | null>(null);
 
@@ -31,7 +33,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [favOpen, setFavOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [quick, setQuick] = useState<Book | null>(null);
-  const [filter, setF] = useState({ category: 'all', q: '', nonce: 0 });
+  const [filter, setF] = useState({ category: 'all', sub: 'all', q: '', nonce: 0 });
   useEffect(() => localStorage.setItem('sifr.cart', JSON.stringify(cart)), [cart]);
   useEffect(() => localStorage.setItem('sifr.favs', JSON.stringify(favs)), [favs]);
   const clamp = (n: number) => Math.max(1, Math.min(99, n));
@@ -45,7 +47,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     cartCount: Object.values(cart).reduce((a, b) => a + b, 0),
     cartOpen, setCartOpen, favOpen, setFavOpen, quick, setQuick, aiOpen, setAiOpen,
     filter,
-    setFilter: (f) => setF((p) => ({ category: f.category ?? p.category, q: f.q ?? p.q, nonce: p.nonce + 1 })),
+    setFilter: (f) => setF((p) => {
+      const category = f.category ?? p.category;
+      const sub = f.sub ?? (category !== p.category ? 'all' : p.sub);
+      return { category, sub, q: f.q ?? p.q, nonce: p.nonce + 1 };
+    }),
+    prune: (valid) => {
+      setCart((c) => {
+        const bad = Object.keys(c).filter((id) => !valid.has(Number(id)));
+        if (!bad.length) return c;
+        const n = { ...c }; bad.forEach((id) => delete n[Number(id)]); return n;
+      });
+      setFavs((f) => (f.every((id) => valid.has(id)) ? f : f.filter((id) => valid.has(id))));
+    },
   };
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }
@@ -56,5 +70,4 @@ export function useStore() {
   return c;
 }
 
-export const CATEGORIES = ['hadith', 'seerah', 'aqeedah', 'tafsir', 'fiqh', 'language', 'terminology', 'tazkiyah'] as const;
 export const RECEIPT_KEY = 'sifr.receipt';

@@ -7,7 +7,9 @@ import NotFound from '@/pages/not-found';
 import Home from '@/pages/home';
 import Checkout from '@/pages/checkout';
 import Confirmation from '@/pages/confirmation';
-import { CartDrawer, FavDrawer, Footer, Nav, QuickView } from '@/components/shell';
+import { CartDrawer, CatalogueSync, FavDrawer, Nav, QuickView } from '@/components/shell';
+import { Footer } from '@/components/footer';
+import Help from '@/pages/help';
 import { Assistant } from '@/components/assistant';
 import { I18nProvider } from '@/lib/i18n';
 import { StoreProvider } from '@/lib/store';
@@ -22,6 +24,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/confirmation" component={Confirmation} />
+        <Route path="/help/:topic" component={Help} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
@@ -41,6 +44,7 @@ function App() {
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
               <div className="paper-grain min-h-[100dvh] bg-[#F6F1E7] text-[#1B2A41]">
+                <CatalogueSync />
                 <Nav />
                 <main className="relative z-[2]">
                   <Router />

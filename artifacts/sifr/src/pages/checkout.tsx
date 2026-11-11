@@ -5,11 +5,11 @@ import { useCreateOrder, type Book, type OrderInputCountry } from '@workspace/ap
 import { BookCover } from '@/components/brand';
 import { useBooksById } from '@/components/shell';
 import { formatKWD, formatNum, useI18n, type TKey } from '@/lib/i18n';
-import { demoShipping, getAdapter, paymentAdapters, type PaymentMethod } from '@/lib/payment';
+import { destinations, shippingFor } from '@workspace/sifr-data';
+import { getAdapter, paymentAdapters, type PaymentMethod } from '@/lib/payment';
 import { RECEIPT_KEY, useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
-const COUNTRIES: OrderInputCountry[] = ['KW', 'SA', 'AE', 'QA', 'BH', 'OM'];
 type Fields = { name: string; email: string; phone: string; country: OrderInputCountry; city: string; address: string };
 type Errs = Partial<Record<keyof Fields, TKey>>;
 
@@ -38,7 +38,8 @@ export default function Checkout() {
   const lines = Object.entries(cart).map(([id, qty]) => ({ book: byId.get(Number(id)), qty, id: Number(id) }));
   const known = lines.filter((l): l is { book: Book; qty: number; id: number } => !!l.book);
   const subtotal = known.reduce((s, l) => s + l.book.price * l.qty, 0);
-  const ship = demoShipping(f.country);
+  const ship = shippingFor(f.country);
+  const countryName = (c: string) => pick(destinations.find((d) => d.code === c)?.name ?? { ar: c, en: c });
 
   const validate = () => {
     const e: Errs = {};
@@ -60,7 +61,7 @@ export default function Checkout() {
         data: {
           name: f.name.trim(), email: f.email.trim(), phone: f.phone.trim(), country: f.country, city: f.city.trim(), address: f.address.trim(),
           paymentMethod: pm,
-          items: lines.map((l) => ({ bookId: l.id, quantity: l.qty })),
+          items: known.map((l) => ({ bookId: l.id, quantity: l.qty })),
         },
       });
       await getAdapter(pm).authorize({ orderNumber: res.orderNumber, total: res.total });
@@ -89,7 +90,7 @@ export default function Checkout() {
     </ol>
   );
 
-  if (lines.length === 0) {
+  if (known.length === 0) {
     return (
       <>
         <DemoBanner />
@@ -130,7 +131,7 @@ export default function Checkout() {
                 <label className="block">
                   <span className="text-sm text-[#1B2A41]/80">{t('co.country')}</span>
                   <select value={f.country} onChange={(e) => setF({ ...f, country: e.target.value as OrderInputCountry })} className={input} data-testid="select-country">
-                    {COUNTRIES.map((c) => <option key={c} value={c}>{t(`cty.${c}` as TKey)} — {formatKWD(demoShipping(c), lang)}</option>)}
+                    {destinations.map((d) => <option key={d.code} value={d.code}>{pick(d.name)} — {formatKWD(d.demoShipping, lang)}</option>)}
                   </select>
                 </label>
                 {field('city', 'co.city')}
@@ -167,12 +168,12 @@ export default function Checkout() {
                 <div className="mt-8 border border-[#1B2A41]/15 bg-[#EFE7D6] p-5 text-sm leading-7">
                   <p className="font-medium">{f.name}</p>
                   <p className="font-light text-muted-foreground"><span dir="ltr">{f.email}</span> — <span dir="ltr">{f.phone}</span></p>
-                  <p className="font-light text-muted-foreground">{f.address}، {f.city}، {t(`cty.${f.country}` as TKey)}</p>
+                  <p className="font-light text-muted-foreground">{f.address}، {f.city}، {countryName(f.country)}</p>
                 </div>
                 {failed && <p className="mt-6 border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive" role="alert" data-testid="status-order-error">{t('co.err')}</p>}
                 <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
                   <button type="button" onClick={() => setStep(1)} disabled={order.isPending} className="border border-[#1B2A41]/30 px-6 py-4 text-sm transition-colors hover:border-[#1B2A41]" data-testid="button-back-delivery">{t('co.back')}</button>
-                  <button type="button" onClick={place} disabled={order.isPending} className="flex-1 bg-[#1B2A41] py-4 text-sm font-medium text-[#F6F1E7] transition-colors duration-300 hover:bg-[#B8893B] hover:text-[#1B2A41] disabled:opacity-60" data-testid="button-place-order">
+                  <button type="button" onClick={place} disabled={order.isPending || known.length === 0} className="flex-1 bg-[#1B2A41] py-4 text-sm font-medium text-[#F6F1E7] transition-colors duration-300 hover:bg-[#B8893B] hover:text-[#1B2A41] disabled:opacity-60" data-testid="button-place-order">
                     {order.isPending ? t('co.placing') : t('co.place')}
                   </button>
                 </div>

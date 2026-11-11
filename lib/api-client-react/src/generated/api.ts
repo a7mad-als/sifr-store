@@ -24,6 +24,7 @@ import type {
   AssistantInput,
   Book,
   HealthStatus,
+  NewsletterInput,
   OrderConfirmation,
   OrderInput,
   QuoteInput,
@@ -396,6 +397,94 @@ export const useAskAssistant = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAskAssistantMutationOptions(options));
+    }
+
+export const getSubscribeNewsletterUrl = () => {
+
+
+
+
+  return `/api/newsletter`
+}
+
+/**
+ * @summary Save a newsletter subscription without sending email
+ */
+export const subscribeNewsletter = async (newsletterInput: NewsletterInput, options?: Parameters<typeof customFetch>[1]): Promise<Receipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Receipt>(getSubscribeNewsletterUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(newsletterInput)
+  }
+);}
+
+
+
+
+
+export const getSubscribeNewsletterMutationKey = () => ['subscribeNewsletter'] as const;
+
+export const getSubscribeNewsletterMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof subscribeNewsletter>>, TError,SubscribeNewsletterMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof subscribeNewsletter>>, TError,SubscribeNewsletterMutationVariables, TContext> => {
+
+const mutationKey = getSubscribeNewsletterMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof subscribeNewsletter>>, SubscribeNewsletterMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  subscribeNewsletter(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubscribeNewsletterMutationResult = NonNullable<Awaited<ReturnType<typeof subscribeNewsletter>>>
+    export type SubscribeNewsletterMutationBody = BodyType<NewsletterInput>
+    export type SubscribeNewsletterMutationError = ErrorType<unknown>
+    export type SubscribeNewsletterMutationVariables = {data: BodyType<NewsletterInput>}
+
+    /**
+ * @summary Save a newsletter subscription without sending email
+ */
+export const useSubscribeNewsletter = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof subscribeNewsletter>>, TError,SubscribeNewsletterMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof subscribeNewsletter>>,
+        TError,
+        SubscribeNewsletterMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubscribeNewsletterMutationOptions(options));
     }
 
 export const getHealthCheckUrl = () => {

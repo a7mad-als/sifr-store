@@ -12,7 +12,13 @@ export interface Book {
   id: number;
   title: LocalizedText;
   author: LocalizedText;
+  publisher: LocalizedText;
   category: string;
+  subcategory: string;
+  volumes: number;
+  volumeLabel: LocalizedText;
+  metadataProvisional: boolean;
+  isDemo: boolean;
   level: BookLevel;
   pages: number;
   binding: LocalizedText;

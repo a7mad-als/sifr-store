@@ -1,5 +1,6 @@
 import type { Book } from '@workspace/api-client-react';
-import { useI18n, type TKey } from '@/lib/i18n';
+import { categoryName } from '@workspace/sifr-data';
+import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export function LogoMark({ className, inverted }: { className?: string; inverted?: boolean }) {
@@ -71,7 +72,7 @@ function Pattern({ kind, color }: { kind: (typeof PATTERNS)[number]; color: stri
 
 /** Illustrated typographic cover generated from the book's own data. */
 export function BookCover({ book, className, size = 'md' }: { book: Book; className?: string; size?: 'sm' | 'md' | 'lg' }) {
-  const { pick, t } = useI18n();
+  const { pick } = useI18n();
   const kind = PATTERNS[book.id % PATTERNS.length];
   const bg = book.color || '#1B2A41';
   return (
@@ -86,10 +87,10 @@ export function BookCover({ book, className, size = 'md' }: { book: Book; classN
         <Pattern kind={kind} color="#E3C78F" />
       </svg>
       <div className="absolute inset-x-[12%] bottom-[11%] text-center">
-        <div className={cn('text-[#E3C78F] tracking-[0.2em] uppercase', size === 'sm' ? 'text-[7px]' : 'text-[9px]')}>{t(`c.${book.category}` as TKey)}</div>
+        <div className={cn('text-[#E3C78F] tracking-[0.2em] uppercase', size === 'sm' ? 'text-[7px]' : 'text-[9px]')}>{pick(categoryName(book.category))}</div>
         <div className={cn('mt-1.5 font-semibold leading-tight line-clamp-3', size === 'sm' ? 'text-[11px]' : size === 'lg' ? 'text-2xl' : 'text-base')}>{pick(book.title)}</div>
         <div className="mx-auto my-2 h-px w-8 bg-[#B8893B]" />
-        <div className={cn('font-light opacity-80 line-clamp-1', size === 'sm' ? 'text-[8px]' : 'text-[11px]')}>{pick(book.author)}</div>
+        <div className={cn('font-light opacity-80 line-clamp-1', size === 'sm' ? 'text-[8px]' : 'text-[11px]')}>{book.author.ar || book.author.en ? pick(book.author) : ''}</div>
       </div>
     </div>
   );

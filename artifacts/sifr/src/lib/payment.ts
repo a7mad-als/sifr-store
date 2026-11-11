@@ -1,3 +1,4 @@
+import { shippingFor } from '@workspace/sifr-data';
 import type { OrderInputPaymentMethod } from '@workspace/api-client-react';
 
 /**
@@ -31,4 +32,4 @@ export function getAdapter(id: PaymentMethod) {
 }
 
 /** Demo shipping estimates, mirrored for display only. Server is authoritative. */
-export const demoShipping = (country: string) => (country === 'KW' ? 2 : 5);
+export const demoShipping = (country: string) => shippingFor(country);

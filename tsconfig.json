@@ -3,6 +3,7 @@
   "compileOnSave": false,
   "files": [],
   "references": [
+    { "path": "./lib/sifr-data" },
     { "path": "./lib/integrations-openai-ai-server" },
     {
       "path": "./lib/db"

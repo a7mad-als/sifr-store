@@ -68,6 +68,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AssistantAnswer" }
+  /newsletter:
+    post:
+      operationId: subscribeNewsletter
+      summary: Save a newsletter subscription without sending email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewsletterInput" }
+      responses:
+        "201":
+          description: Subscription saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Receipt" }
   /healthz:
     get:
       operationId: healthCheck
@@ -91,12 +106,18 @@ components:
         en: { type: string }
     Book:
       type: object
-      required: [id, title, author, category, level, pages, binding, description, price, color, featured]
+      required: [id, title, author, publisher, category, subcategory, level, pages, volumes, volumeLabel, metadataProvisional, isDemo, binding, description, price, color, featured]
       properties:
         id: { type: integer }
         title: { $ref: "#/components/schemas/LocalizedText" }
         author: { $ref: "#/components/schemas/LocalizedText" }
+        publisher: { $ref: "#/components/schemas/LocalizedText" }
         category: { type: string }
+        subcategory: { type: string }
+        volumes: { type: integer }
+        volumeLabel: { $ref: "#/components/schemas/LocalizedText" }
+        metadataProvisional: { type: boolean }
+        isDemo: { type: boolean }
         level: { type: string, enum: [beginner, intermediate, advanced] }
         pages: { type: integer }
         binding: { $ref: "#/components/schemas/LocalizedText" }
@@ -118,7 +139,7 @@ components:
         name: { type: string, minLength: 2, maxLength: 100 }
         email: { type: string, format: email }
         phone: { type: string, minLength: 7, maxLength: 25 }
-        country: { type: string, enum: [KW, SA, AE, QA, BH, OM] }
+        country: { type: string, enum: [KW, SA, AE, QA, BH, OM, SY, JO, LB, IQ, PS, YE, EG, SD, LY, TN, DZ, MA, MR, SO, DJ, KM, TR, RU, RU-DA, RU-CE] }
         city: { type: string, minLength: 2, maxLength: 100 }
         address: { type: string, minLength: 5, maxLength: 500 }
         paymentMethod: { type: string, enum: [knet, card, myfatoorah, stripe] }
@@ -138,13 +159,21 @@ components:
         demo: { type: boolean }
     QuoteInput:
       type: object
-      required: [organization, name, email, quantity, message]
+      required: [entityType, name, country, contactMethod, contact, cooperation, message]
       properties:
-        organization: { type: string, minLength: 2, maxLength: 150 }
+        entityType: { type: string, enum: [bookshop, publisher, education, charity, research, distributor] }
         name: { type: string, minLength: 2, maxLength: 100 }
-        email: { type: string, format: email }
-        quantity: { type: integer, minimum: 10, maximum: 100000 }
+        country: { type: string, minLength: 2, maxLength: 100 }
+        contactMethod: { type: string, enum: [email, whatsapp, phone] }
+        contact: { type: string, minLength: 5, maxLength: 200 }
+        cooperation: { type: string, minLength: 2, maxLength: 200 }
         message: { type: string, minLength: 5, maxLength: 3000 }
+    NewsletterInput:
+      type: object
+      required: [email, language]
+      properties:
+        email: { type: string, format: email, maxLength: 200 }
+        language: { type: string, enum: [ar, en] }
     Receipt:
       type: object
       required: [reference]
