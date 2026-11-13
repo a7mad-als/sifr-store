@@ -12,6 +12,7 @@ import { Footer } from '@/components/footer';
 import Help from '@/pages/help';
 import { Assistant } from '@/components/assistant';
 import { I18nProvider } from '@/lib/i18n';
+import { MarketNotice, MarketProvider } from '@/lib/market';
 import { StoreProvider } from '@/lib/store';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 
@@ -40,12 +41,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
+       <MarketProvider>
         <StoreProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
               <div className="paper-grain min-h-[100dvh] bg-[#F6F1E7] text-[#1B2A41]">
                 <CatalogueSync />
                 <Nav />
+                <MarketNotice />
                 <main className="relative z-[2]">
                   <Router />
                 </main>
@@ -59,6 +62,7 @@ function App() {
             <Toaster />
           </TooltipProvider>
         </StoreProvider>
+       </MarketProvider>
       </I18nProvider>
     </QueryClientProvider>
   );

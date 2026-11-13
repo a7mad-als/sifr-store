@@ -1,21 +1,103 @@
 import type { Localized } from "./taxonomy";
 const l = (ar: string, en: string): Localized => ({ ar, en });
-// All public destinations, demo rates, contact details, footer links and external
-// service placeholders live here. null URLs are intentionally NOT clickable.
-export const destinations = [
-  ["KW", "الكويت", "Kuwait"], ["SA", "السعودية", "Saudi Arabia"], ["AE", "الإمارات", "United Arab Emirates"],
-  ["QA", "قطر", "Qatar"], ["BH", "البحرين", "Bahrain"], ["OM", "عُمان", "Oman"],
-  ["SY", "سوريا", "Syria"], ["JO", "الأردن", "Jordan"], ["LB", "لبنان", "Lebanon"], ["IQ", "العراق", "Iraq"],
-  ["PS", "فلسطين", "Palestine"], ["YE", "اليمن", "Yemen"], ["EG", "مصر", "Egypt"], ["SD", "السودان", "Sudan"],
-  ["LY", "ليبيا", "Libya"], ["TN", "تونس", "Tunisia"], ["DZ", "الجزائر", "Algeria"], ["MA", "المغرب", "Morocco"],
-  ["MR", "موريتانيا", "Mauritania"], ["SO", "الصومال", "Somalia"], ["DJ", "جيبوتي", "Djibouti"], ["KM", "جزر القمر", "Comoros"],
-  ["TR", "تركيا", "Türkiye"], ["RU", "روسيا", "Russia"], ["RU-DA", "داغستان (روسيا)", "Dagestan (Russia)"], ["RU-CE", "الشيشان (روسيا)", "Chechnya (Russia)"],
-].map(([code, ar, en]) => ({ code, name: l(ar, en), demoShipping: code === "KW" ? 2 : ["SA", "AE", "QA", "BH", "OM"].includes(code) ? 5 : 8 }));
+// Rates are illustrative KWD. One editable table drives checkout estimates
+// and authoritative order totals; the first 0.5 kg is included in each base.
+export const shippingZones = [
+  { id: "gulf", name: l("الخليج", "Gulf"), baseKwd: 5, perExtraKgKwd: 1.5, minDays: 3, maxDays: 7 },
+  { id: "levantEgypt", name: l("بلاد الشام ومصر", "Levant & Egypt"), baseKwd: 8, perExtraKgKwd: 2, minDays: 7, maxDays: 14 },
+  { id: "maghreb", name: l("المغرب العربي", "Maghreb"), baseKwd: 10, perExtraKgKwd: 2.5, minDays: 10, maxDays: 18 },
+  { id: "arabOther", name: l("بقية الدول العربية", "Other Arab countries"), baseKwd: 9, perExtraKgKwd: 2, minDays: 8, maxDays: 16 },
+  { id: "turkey", name: l("تركيا", "Türkiye"), baseKwd: 9, perExtraKgKwd: 2, minDays: 5, maxDays: 10 },
+  { id: "russiaCaucasus", name: l("روسيا ودول القوقاز الروسية", "Russia & Russian Caucasus"), baseKwd: 12, perExtraKgKwd: 3, minDays: 10, maxDays: 21 },
+  { id: "restWorld", name: l("بقية العالم", "Rest of world"), baseKwd: 15, perExtraKgKwd: 3, minDays: 12, maxDays: 25 },
+] as const;
+
+export type ShippingZoneId = typeof shippingZones[number]["id"];
+export type StoreCountry = {
+  code: string;
+  name: Localized;
+  callingCode: string;
+  currency: string;
+  shippingZone: ShippingZoneId;
+  region?: boolean;
+};
+
+const gcc = new Set(["KW", "SA", "AE", "QA", "BH", "OM"]);
+const levantEgypt = new Set(["SY", "JO", "LB", "IQ", "PS", "EG"]);
+const maghreb = new Set(["LY", "TN", "DZ", "MA", "MR"]);
+const otherArab = new Set(["YE", "SD", "SO", "DJ", "KM"]);
+export function shippingZoneFor(code: string): ShippingZoneId {
+  if (gcc.has(code)) return "gulf";
+  if (levantEgypt.has(code)) return "levantEgypt";
+  if (maghreb.has(code)) return "maghreb";
+  if (otherArab.has(code)) return "arabOther";
+  if (code === "TR") return "turkey";
+  if (code === "RU" || code === "RU-DA" || code === "RU-CE") return "russiaCaucasus";
+  return "restWorld";
+}
+
+export function estimateShipping(code: string, weightKg: number) {
+  const zoneId = shippingZoneFor(code);
+  const zone = shippingZones.find(item => item.id === zoneId)!;
+  const weight = Number.isFinite(weightKg) ? Math.max(0.5, weightKg) : 0.5;
+  const extraKg = Math.ceil(Math.max(0, weight - 0.5));
+  return {
+    amountKwd: Math.round((zone.baseKwd + extraKg * zone.perExtraKgKwd) * 1000) / 1000,
+    zone: zoneId,
+    minDays: zone.minDays,
+    maxDays: zone.maxDays,
+    weightKg: Math.round(weight * 100) / 100,
+  };
+}
+
+const fallbackRows: [string, string, string, string, string][] = [
+  ["KW", "الكويت", "Kuwait", "+965", "KWD"], ["SA", "السعودية", "Saudi Arabia", "+966", "SAR"],
+  ["AE", "الإمارات", "United Arab Emirates", "+971", "AED"], ["QA", "قطر", "Qatar", "+974", "QAR"],
+  ["BH", "البحرين", "Bahrain", "+973", "BHD"], ["OM", "عُمان", "Oman", "+968", "OMR"],
+  ["SY", "سوريا", "Syria", "+963", "SYP"], ["JO", "الأردن", "Jordan", "+962", "JOD"],
+  ["LB", "لبنان", "Lebanon", "+961", "LBP"], ["IQ", "العراق", "Iraq", "+964", "IQD"],
+  ["PS", "فلسطين", "Palestine", "+970", "ILS"], ["YE", "اليمن", "Yemen", "+967", "YER"],
+  ["EG", "مصر", "Egypt", "+20", "EGP"], ["SD", "السودان", "Sudan", "+249", "SDG"],
+  ["LY", "ليبيا", "Libya", "+218", "LYD"], ["TN", "تونس", "Tunisia", "+216", "TND"],
+  ["DZ", "الجزائر", "Algeria", "+213", "DZD"], ["MA", "المغرب", "Morocco", "+212", "MAD"],
+  ["MR", "موريتانيا", "Mauritania", "+222", "MRU"], ["SO", "الصومال", "Somalia", "+252", "SOS"],
+  ["DJ", "جيبوتي", "Djibouti", "+253", "DJF"], ["KM", "جزر القمر", "Comoros", "+269", "KMF"],
+  ["TR", "تركيا", "Türkiye", "+90", "TRY"], ["RU", "روسيا", "Russia", "+7", "RUB"],
+];
+export const fallbackCountries: StoreCountry[] = fallbackRows.map(([code, ar, en, callingCode, currency]) => ({
+  code, name: l(ar, en), callingCode, currency, shippingZone: shippingZoneFor(code),
+}));
+// Backwards-compatible destination aliases for Russian republics.
+export const destinationRegions: StoreCountry[] = [
+  { code: "RU-DA", name: l("داغستان (روسيا)", "Dagestan (Russia)"), callingCode: "+7", currency: "RUB", shippingZone: "russiaCaucasus", region: true },
+  { code: "RU-CE", name: l("الشيشان (روسيا)", "Chechnya (Russia)"), callingCode: "+7", currency: "RUB", shippingZone: "russiaCaucasus", region: true },
+];
+// All public currencies, fallback countries, demo shipping and contact details
+// live in this file so the storefront can be updated without editing components.
+export const currencyOptions = [
+  ["KWD", "د.ك", "Kuwaiti Dinar", "دينار كويتي"], ["SAR", "ر.س", "Saudi Riyal", "ريال سعودي"],
+  ["AED", "د.إ", "UAE Dirham", "درهم إماراتي"], ["QAR", "ر.ق", "Qatari Riyal", "ريال قطري"],
+  ["BHD", "د.ب", "Bahraini Dinar", "دينار بحريني"], ["OMR", "ر.ع", "Omani Rial", "ريال عُماني"],
+  ["YER", "ر.ي", "Yemeni Rial", "ريال يمني"], ["IQD", "د.ع", "Iraqi Dinar", "دينار عراقي"],
+  ["JOD", "د.أ", "Jordanian Dinar", "دينار أردني"], ["LBP", "ل.ل", "Lebanese Pound", "ليرة لبنانية"],
+  ["SYP", "ل.س", "Syrian Pound", "ليرة سورية"], ["EGP", "ج.م", "Egyptian Pound", "جنيه مصري"],
+  ["SDG", "ج.س", "Sudanese Pound", "جنيه سوداني"], ["LYD", "د.ل", "Libyan Dinar", "دينار ليبي"],
+  ["TND", "د.ت", "Tunisian Dinar", "دينار تونسي"], ["DZD", "د.ج", "Algerian Dinar", "دينار جزائري"],
+  ["MAD", "د.م", "Moroccan Dirham", "درهم مغربي"], ["MRU", "أ.م", "Mauritanian Ouguiya", "أوقية موريتانية"],
+  ["SOS", "Sh", "Somali Shilling", "شلن صومالي"], ["DJF", "Fdj", "Djiboutian Franc", "فرنك جيبوتي"],
+  ["KMF", "CF", "Comorian Franc", "فرنك قمري"], ["ILS", "₪", "Israeli New Shekel", "شيكل إسرائيلي"],
+  ["TRY", "₺", "Turkish Lira", "ليرة تركية"], ["RUB", "₽", "Russian Ruble", "روبل روسي"],
+  ["USD", "$", "US Dollar", "دولار أمريكي"], ["EUR", "€", "Euro", "يورو"],
+].map(([code, symbol, en, ar]) => ({ code, symbol, name: l(ar, en) }));
+
+export const destinations = [...fallbackCountries, ...destinationRegions].map(country => ({
+  ...country,
+  demoShipping: estimateShipping(country.code, 0.5).amountKwd,
+}));
 
 export function shippingFor(code: string) {
-  const destination = destinations.find(item => item.code === code);
-  if (!destination) throw new Error("Unsupported shipping destination");
-  return destination.demoShipping;
+  if (!/^[A-Z]{2}(-[A-Z]{2})?$/.test(code)) throw new Error("Unsupported shipping destination");
+  return estimateShipping(code, 0.5).amountKwd;
 }
 
 export const partnerTracks = [

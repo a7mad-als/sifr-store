@@ -11,6 +11,11 @@ import * as zod from 'zod';
 /**
  * @summary Bilingual curated catalogue
  */
+export const listBooksResponseWeightKgMin = 0.01;
+export const listBooksResponseWeightKgMax = 100;
+
+
+
 export const ListBooksResponseItem = zod.object({
   "id": zod.number().int(),
   "title": zod.object({
@@ -45,6 +50,7 @@ export const ListBooksResponseItem = zod.object({
   "en": zod.string()
 }),
   "price": zod.number(),
+  "weightKg": zod.number().min(listBooksResponseWeightKgMin).max(listBooksResponseWeightKgMax),
   "color": zod.string(),
   "featured": zod.boolean()
 })
@@ -60,6 +66,7 @@ export const createOrderBodyNameMax = 100;
 export const createOrderBodyPhoneMin = 7;
 export const createOrderBodyPhoneMax = 25;
 
+export const createOrderBodyCountryRegExp = new RegExp('^[A-Z]{2}(-[A-Z]{2})?$');
 export const createOrderBodyCityMin = 2;
 export const createOrderBodyCityMax = 100;
 
@@ -76,7 +83,7 @@ export const CreateOrderBody = zod.object({
   "name": zod.string().min(createOrderBodyNameMin).max(createOrderBodyNameMax),
   "email": zod.string().email(),
   "phone": zod.string().min(createOrderBodyPhoneMin).max(createOrderBodyPhoneMax),
-  "country": zod.enum(['KW', 'SA', 'AE', 'QA', 'BH', 'OM', 'SY', 'JO', 'LB', 'IQ', 'PS', 'YE', 'EG', 'SD', 'LY', 'TN', 'DZ', 'MA', 'MR', 'SO', 'DJ', 'KM', 'TR', 'RU', 'RU-DA', 'RU-CE']),
+  "country": zod.string().regex(createOrderBodyCountryRegExp),
   "city": zod.string().min(createOrderBodyCityMin).max(createOrderBodyCityMax),
   "address": zod.string().min(createOrderBodyAddressMin).max(createOrderBodyAddressMax),
   "paymentMethod": zod.enum(['knet', 'card', 'myfatoorah', 'stripe']),
@@ -91,7 +98,54 @@ export const CreateOrderResponse = zod.object({
   "subtotal": zod.number(),
   "shipping": zod.number(),
   "total": zod.number(),
-  "demo": zod.boolean()
+  "demo": zod.boolean(),
+  "shippingEstimate": zod.object({
+  "amountKwd": zod.number(),
+  "zone": zod.string(),
+  "minDays": zod.number().int(),
+  "maxDays": zod.number().int(),
+  "weightKg": zod.number()
+})
+})
+
+
+/**
+ * @summary Get cached exchange rates based on KWD
+ */
+export const getExchangeRatesResponseRatesMinOne = 0;
+
+
+
+export const GetExchangeRatesResponse = zod.object({
+  "base": zod.enum(['KWD']),
+  "rates": zod.record(zod.string(), zod.number().min(getExchangeRatesResponseRatesMinOne)),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get translated countries and calling codes
+ */
+export const ListCountriesResponse = zod.object({
+  "countries": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.object({
+  "ar": zod.string(),
+  "en": zod.string()
+}),
+  "callingCode": zod.string(),
+  "currency": zod.string(),
+  "shippingZone": zod.string()
+})),
+  "fallback": zod.boolean()
+})
+
+
+/**
+ * @summary Suggest a visitor country from IP without storing it
+ */
+export const SuggestVisitorCountryResponse = zod.object({
+  "countryCode": zod.string().nullable()
 })
 
 

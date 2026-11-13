@@ -1,7 +1,8 @@
 import { Eye, Heart, Plus, Check } from 'lucide-react';
 import type { Book } from '@workspace/api-client-react';
 import { BookCover } from '@/components/brand';
-import { formatKWD, useI18n } from '@/lib/i18n';
+import { useI18n } from '@/lib/i18n';
+import { useMarket } from '@/lib/market';
 import { useBookMeta } from '@/lib/catalog';
 import { useStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +37,7 @@ export function BookFlags({ book, className }: { book: Book; className?: string 
 
 export function BookCard({ book, index = 0 }: { book: Book; index?: number }) {
   const { t, pick, lang } = useI18n();
+  const { formatPrice } = useMarket();
   const { favs, cart, setQuick } = useStore();
   const { addToCart, fav } = useBookActions();
   const m = useBookMeta();
@@ -71,7 +73,7 @@ export function BookCard({ book, index = 0 }: { book: Book; index?: number }) {
         <BookFlags book={book} className="mt-2" />
         <div className="mt-auto flex items-center justify-between gap-3 pt-4">
           <span className="flex flex-col">
-            <span className="text-base font-semibold tabular-nums" data-testid={`text-price-${book.id}`}>{formatKWD(book.price, lang)}</span>
+            <span className="text-base font-semibold tabular-nums" data-testid={`text-price-${book.id}`}>{formatPrice(book.price)}</span>
             <span className="text-[10px] text-muted-foreground">{t('b.demoPrice')}</span>
           </span>
           <button type="button" onClick={() => addToCart(book)} className={cn('flex items-center gap-1.5 border px-3 py-2 text-xs font-medium transition-all duration-300', inCart ? 'border-[#B8893B] bg-[#B8893B] text-[#1B2A41]' : 'border-[#1B2A41] text-[#1B2A41] hover:bg-[#1B2A41] hover:text-[#F6F1E7]')} data-testid={`button-add-${book.id}`}>

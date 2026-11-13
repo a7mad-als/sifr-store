@@ -15,7 +15,7 @@ const siraj = l("الشيخ عبد الله سراج الدين الحسيني",
 const minhaj = l("دار المنهاج", "Dar al-Minhaj");
 const taqwa = l("دار التقوى", "Dar al-Taqwa");
 type BookRecord = {
-  id: number; title: Localized; author: Localized; publisher: Localized;
+  id: number; title: Localized; author: Localized; publisher: Localized; weightKg: number;
   category: string; subcategory: string; level: "beginner" | "intermediate" | "advanced";
   pages: number; volumes: number; volumeLabel: Localized; binding: Localized; description: Localized;
   price: number; color: string; featured: boolean; isDemo: boolean; metadataProvisional: boolean;
@@ -23,7 +23,7 @@ type BookRecord = {
 function book(data: Pick<BookRecord, "id" | "title" | "category" | "price"> & Partial<BookRecord>): BookRecord {
   return {
     author: pending, publisher: pending, subcategory: "", level: "intermediate",
-    pages: 0, volumes: 1, volumeLabel: l("مجلد واحد", "Single volume"), binding: pending,
+    weightKg: 0.5, pages: 0, volumes: 1, volumeLabel: l("مجلد واحد", "Single volume"), binding: pending,
     description: l("تفاصيل هذه الطبعة قيد الاستكمال. السعر تجريبي.", "Edition details are being prepared. The price is illustrative."),
     color: "#1B2A41", featured: false, isDemo: false, metadataProvisional: true,
     ...data,

@@ -9,6 +9,7 @@ import { facetKey } from '@/lib/catalog';
 import { formatNum, normalize, useI18n } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useMarket } from '@/lib/market';
 
 type Sort = 'none' | 'asc' | 'desc';
 type Local = { level: string; sort: Sort; author: string; publisher: string; min: string; max: string };
@@ -32,6 +33,7 @@ const lbl = 'block text-xs tracking-wide text-[#1B2A41]/60';
 
 function Facets({ books, local, setLocal, idp }: { books: Book[]; local: Local; setLocal: (l: Local) => void; idp: string }) {
   const { t, pick, lang } = useI18n();
+  const { currency } = useMarket();
   const { filter, setFilter } = useStore();
   const counts = useMemo(() => {
     const m: Record<string, number> = {};
@@ -81,7 +83,7 @@ function Facets({ books, local, setLocal, idp }: { books: Book[]; local: Local; 
         </select>
       </label>
       <fieldset>
-        <legend className={lbl}>{t('f.price')}</legend>
+        <legend className={lbl}>{t('f.price')} ({currency})</legend>
         <div className="mt-1.5 grid grid-cols-2 gap-2">
           {(['min', 'max'] as const).map((k) => (
             <input key={k} type="number" inputMode="decimal" min={0} step="0.5" value={local[k]} placeholder={t(k === 'min' ? 'f.min' : 'f.max')} aria-label={t(k === 'min' ? 'f.min' : 'f.max')} aria-invalid={priceBad} onChange={(e) => setLocal({ ...local, [k]: e.target.value })} className={cn(sel, 'mt-0', priceBad && 'border-destructive')} dir="ltr" data-testid={`${idp}-input-price-${k}`} />
@@ -102,14 +104,16 @@ function Facets({ books, local, setLocal, idp }: { books: Book[]; local: Local; 
 
 export function Catalogue({ books, isLoading, isError, onRetry }: { books: Book[] | undefined; isLoading: boolean; isError: boolean; onRetry: () => void }) {
   const { t, lang, dir } = useI18n();
+  const { currency, rates } = useMarket();
   const { filter, setFilter } = useStore();
   const [local, setLocal] = useState<Local>(INIT);
   const [drawer, setDrawer] = useState(false);
   const all = useMemo(() => books ?? [], [books]);
   const q = normalize(filter.q);
   const results = useMemo(() => {
-    const min = local.min === '' ? -Infinity : Number(local.min);
-    const max = local.max === '' ? Infinity : Number(local.max);
+    const rate = currency === 'KWD' ? 1 : rates?.rates[currency] ?? 1;
+    const min = local.min === '' ? -Infinity : Number(local.min) / rate;
+    const max = local.max === '' ? Infinity : Number(local.max) / rate;
     let r = all.filter((b) => {
       if (filter.category !== 'all' && b.category !== filter.category) return false;
       if (filter.sub !== 'all' && b.subcategory !== filter.sub) return false;
@@ -122,7 +126,7 @@ export function Catalogue({ books, isLoading, isError, onRetry }: { books: Book[
     });
     if (local.sort !== 'none') r = [...r].sort((a, b) => (local.sort === 'asc' ? a.price - b.price : b.price - a.price));
     return r;
-  }, [all, filter.category, filter.sub, local, q]);
+  }, [all, filter.category, filter.sub, local, q, currency, rates]);
   const activeCount = [filter.category !== 'all', filter.sub !== 'all', local.level !== 'all', local.author !== 'all', local.publisher !== 'all', local.min !== '', local.max !== '', local.sort !== 'none'].filter(Boolean).length;
   const dirty = activeCount > 0 || !!filter.q;
   const reset = () => { setFilter({ category: 'all', sub: 'all', q: '' }); setLocal(INIT); };

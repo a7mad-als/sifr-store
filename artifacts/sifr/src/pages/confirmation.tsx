@@ -3,14 +3,16 @@ import { Link } from 'wouter';
 import { CheckCircle2, FileQuestion } from 'lucide-react';
 import type { OrderConfirmation } from '@workspace/api-client-react';
 import { DemoBanner } from '@/pages/checkout';
-import { formatKWD, useI18n } from '@/lib/i18n';
+import { useI18n } from '@/lib/i18n';
 import { getAdapter, type PaymentMethod } from '@/lib/payment';
 import { RECEIPT_KEY } from '@/lib/store';
+import { useMarket } from '@/lib/market';
 
 type Receipt = OrderConfirmation & { paymentMethod: PaymentMethod; placedAt: string };
 
 export default function Confirmation() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
+  const { formatPrice } = useMarket();
   const r = useMemo<Receipt | null>(() => {
     try { const v = localStorage.getItem(RECEIPT_KEY); return v ? (JSON.parse(v) as Receipt) : null; } catch { return null; }
   }, []);
@@ -40,11 +42,12 @@ export default function Confirmation() {
             <p className="mt-1 font-mono text-2xl tracking-wider text-[#B8893B]" dir="ltr" data-testid="text-order-number">{r.orderNumber}</p>
           </div>
           <dl className="space-y-3 px-8 py-8 text-sm">
-            <div className="flex justify-between"><dt className="text-muted-foreground">{t('cf.subtotal')}</dt><dd className="tabular-nums" data-testid="text-subtotal">{formatKWD(r.subtotal, lang)}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted-foreground">{t('cf.shipping')}</dt><dd className="tabular-nums" data-testid="text-shipping">{formatKWD(r.shipping, lang)}</dd></div>
-            <div className="flex justify-between border-t border-[#1B2A41]/10 pt-4 text-xl font-semibold"><dt>{t('cf.total')}</dt><dd className="tabular-nums" data-testid="text-total">{formatKWD(r.total, lang)}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted-foreground">{t('cf.subtotal')}</dt><dd className="tabular-nums" data-testid="text-subtotal">{formatPrice(r.subtotal)}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted-foreground">{t('cf.shipping')}</dt><dd className="tabular-nums" data-testid="text-shipping">{formatPrice(r.shipping)}</dd></div>
+            <div className="flex justify-between border-t border-[#1B2A41]/10 pt-4 text-xl font-semibold"><dt>{t('cf.total')}</dt><dd className="tabular-nums" data-testid="text-total">{formatPrice(r.total)}</dd></div>
             <div className="flex justify-between pt-2"><dt className="text-muted-foreground">{t('cf.method')}</dt><dd>{t(a.labelKey)}</dd></div>
           </dl>
+          {r.shippingEstimate && <p className="border-t border-[#1B2A41]/10 px-8 py-4 text-xs text-muted-foreground">{t('market.currencyDisclaimer')}</p>}
           <p className="border-t border-[#1B2A41]/10 bg-[#B8893B]/15 px-8 py-4 text-sm text-[#1B2A41]" data-testid="text-demo-note">{t('cf.demo')}</p>
         </div>
         <div className="text-center">{back}</div>

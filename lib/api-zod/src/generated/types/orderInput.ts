@@ -5,7 +5,6 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { OrderInputCountry } from './orderInputCountry';
 import type { OrderInputPaymentMethod } from './orderInputPaymentMethod';
 import type { OrderItem } from './orderItem';
 
@@ -21,7 +20,8 @@ export interface OrderInput {
      * @maxLength 25
      */
   phone: string;
-  country: OrderInputCountry;
+  /** @pattern ^[A-Z]{2}(-[A-Z]{2})?$ */
+  country: string;
   /**
      * @minLength 2
      * @maxLength 100

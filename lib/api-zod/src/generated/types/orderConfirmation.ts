@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ShippingEstimate } from './shippingEstimate';
 
 export interface OrderConfirmation {
   orderNumber: string;
@@ -12,4 +13,5 @@ export interface OrderConfirmation {
   shipping: number;
   total: number;
   demo: boolean;
+  shippingEstimate: ShippingEstimate;
 }

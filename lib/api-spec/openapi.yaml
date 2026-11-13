@@ -38,6 +38,38 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/OrderConfirmation" }
+  /exchange-rates:
+    get:
+      operationId: getExchangeRates
+      summary: Get cached exchange rates based on KWD
+      responses:
+        "200":
+          description: Current estimated rates
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExchangeRates" }
+        "503":
+          description: Rates unavailable
+  /countries:
+    get:
+      operationId: listCountries
+      summary: Get translated countries and calling codes
+      responses:
+        "200":
+          description: Countries and fallback status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CountriesResponse" }
+  /visitor-location:
+    get:
+      operationId: suggestVisitorCountry
+      summary: Suggest a visitor country from IP without storing it
+      responses:
+        "200":
+          description: Detected country code, when available
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VisitorLocation" }
   /quotes:
     post:
       operationId: createQuote
@@ -106,7 +138,7 @@ components:
         en: { type: string }
     Book:
       type: object
-      required: [id, title, author, publisher, category, subcategory, level, pages, volumes, volumeLabel, metadataProvisional, isDemo, binding, description, price, color, featured]
+      required: [id, title, author, publisher, category, subcategory, level, pages, volumes, volumeLabel, metadataProvisional, isDemo, binding, description, price, weightKg, color, featured]
       properties:
         id: { type: integer }
         title: { $ref: "#/components/schemas/LocalizedText" }
@@ -123,6 +155,7 @@ components:
         binding: { $ref: "#/components/schemas/LocalizedText" }
         description: { $ref: "#/components/schemas/LocalizedText" }
         price: { type: number }
+        weightKg: { type: number, minimum: 0.01, maximum: 100 }
         color: { type: string }
         featured: { type: boolean }
     OrderItem:
@@ -139,7 +172,7 @@ components:
         name: { type: string, minLength: 2, maxLength: 100 }
         email: { type: string, format: email }
         phone: { type: string, minLength: 7, maxLength: 25 }
-        country: { type: string, enum: [KW, SA, AE, QA, BH, OM, SY, JO, LB, IQ, PS, YE, EG, SD, LY, TN, DZ, MA, MR, SO, DJ, KM, TR, RU, RU-DA, RU-CE] }
+        country: { type: string, pattern: "^[A-Z]{2}(-[A-Z]{2})?$" }
         city: { type: string, minLength: 2, maxLength: 100 }
         address: { type: string, minLength: 5, maxLength: 500 }
         paymentMethod: { type: string, enum: [knet, card, myfatoorah, stripe] }
@@ -150,13 +183,52 @@ components:
           items: { $ref: "#/components/schemas/OrderItem" }
     OrderConfirmation:
       type: object
-      required: [orderNumber, subtotal, shipping, total, demo]
+      required: [orderNumber, subtotal, shipping, total, demo, shippingEstimate]
       properties:
         orderNumber: { type: string }
         subtotal: { type: number }
         shipping: { type: number }
         total: { type: number }
         demo: { type: boolean }
+        shippingEstimate: { $ref: "#/components/schemas/ShippingEstimate" }
+    ShippingEstimate:
+      type: object
+      required: [amountKwd, zone, minDays, maxDays, weightKg]
+      properties:
+        amountKwd: { type: number }
+        zone: { type: string }
+        minDays: { type: integer }
+        maxDays: { type: integer }
+        weightKg: { type: number }
+    ExchangeRates:
+      type: object
+      required: [base, rates, updatedAt]
+      properties:
+        base: { type: string, enum: [KWD] }
+        rates: { type: object, additionalProperties: { type: number, minimum: 0 } }
+        updatedAt: { type: string }
+    Country:
+      type: object
+      required: [code, name, callingCode, currency, shippingZone]
+      properties:
+        code: { type: string }
+        name: { $ref: "#/components/schemas/LocalizedText" }
+        callingCode: { type: string }
+        currency: { type: string }
+        shippingZone: { type: string }
+    CountriesResponse:
+      type: object
+      required: [countries, fallback]
+      properties:
+        countries:
+          type: array
+          items: { $ref: "#/components/schemas/Country" }
+        fallback: { type: boolean }
+    VisitorLocation:
+      type: object
+      required: [countryCode]
+      properties:
+        countryCode: { type: ["string", "null"] }
     QuoteInput:
       type: object
       required: [entityType, name, country, contactMethod, contact, cooperation, message]

@@ -35,6 +35,11 @@ export interface Book {
   binding: LocalizedText;
   description: LocalizedText;
   price: number;
+  /**
+     * @minimum 0.01
+     * @maximum 100
+     */
+  weightKg: number;
   color: string;
   featured: boolean;
 }
@@ -47,38 +52,6 @@ export interface OrderItem {
      */
   quantity: number;
 }
-
-export type OrderInputCountry = typeof OrderInputCountry[keyof typeof OrderInputCountry];
-
-
-export const OrderInputCountry = {
-  KW: 'KW',
-  SA: 'SA',
-  AE: 'AE',
-  QA: 'QA',
-  BH: 'BH',
-  OM: 'OM',
-  SY: 'SY',
-  JO: 'JO',
-  LB: 'LB',
-  IQ: 'IQ',
-  PS: 'PS',
-  YE: 'YE',
-  EG: 'EG',
-  SD: 'SD',
-  LY: 'LY',
-  TN: 'TN',
-  DZ: 'DZ',
-  MA: 'MA',
-  MR: 'MR',
-  SO: 'SO',
-  DJ: 'DJ',
-  KM: 'KM',
-  TR: 'TR',
-  RU: 'RU',
-  'RU-DA': 'RU-DA',
-  'RU-CE': 'RU-CE',
-} as const;
 
 export type OrderInputPaymentMethod = typeof OrderInputPaymentMethod[keyof typeof OrderInputPaymentMethod];
 
@@ -102,7 +75,8 @@ export interface OrderInput {
      * @maxLength 25
      */
   phone: string;
-  country: OrderInputCountry;
+  /** @pattern ^[A-Z]{2}(-[A-Z]{2})?$ */
+  country: string;
   /**
      * @minLength 2
      * @maxLength 100
@@ -121,12 +95,54 @@ export interface OrderInput {
   items: OrderItem[];
 }
 
+export interface ShippingEstimate {
+  amountKwd: number;
+  zone: string;
+  minDays: number;
+  maxDays: number;
+  weightKg: number;
+}
+
 export interface OrderConfirmation {
   orderNumber: string;
   subtotal: number;
   shipping: number;
   total: number;
   demo: boolean;
+  shippingEstimate: ShippingEstimate;
+}
+
+export type ExchangeRatesBase = typeof ExchangeRatesBase[keyof typeof ExchangeRatesBase];
+
+
+export const ExchangeRatesBase = {
+  KWD: 'KWD',
+} as const;
+
+export type ExchangeRatesRates = {[key: string]: number};
+
+export interface ExchangeRates {
+  base: ExchangeRatesBase;
+  rates: ExchangeRatesRates;
+  updatedAt: string;
+}
+
+export interface Country {
+  code: string;
+  name: LocalizedText;
+  callingCode: string;
+  currency: string;
+  shippingZone: string;
+}
+
+export interface CountriesResponse {
+  countries: Country[];
+  fallback: boolean;
+}
+
+export interface VisitorLocation {
+  /** @nullable */
+  countryCode: string | null;
 }
 
 export type QuoteInputEntityType = typeof QuoteInputEntityType[keyof typeof QuoteInputEntityType];

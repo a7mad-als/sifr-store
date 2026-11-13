@@ -24,6 +24,11 @@ export interface Book {
   binding: LocalizedText;
   description: LocalizedText;
   price: number;
+  /**
+     * @minimum 0.01
+     * @maximum 100
+     */
+  weightKg: number;
   color: string;
   featured: boolean;
 }

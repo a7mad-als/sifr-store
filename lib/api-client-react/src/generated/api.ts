@@ -23,12 +23,15 @@ import type {
   AssistantAnswer,
   AssistantInput,
   Book,
+  CountriesResponse,
+  ExchangeRates,
   HealthStatus,
   NewsletterInput,
   OrderConfirmation,
   OrderInput,
   QuoteInput,
-  Receipt
+  Receipt,
+  VisitorLocation
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -222,6 +225,237 @@ export const useCreateOrder = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateOrderMutationOptions(options));
     }
+
+export const getGetExchangeRatesUrl = () => {
+
+
+
+
+  return `/api/exchange-rates`
+}
+
+/**
+ * @summary Get cached exchange rates based on KWD
+ */
+export const getExchangeRates = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExchangeRates> => {
+
+  return customFetch<ExchangeRates>(getGetExchangeRatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExchangeRatesQueryKey = () => {
+    return [
+    `/api/exchange-rates`
+    ] as const;
+    }
+
+
+export const getGetExchangeRatesQueryOptions = <TData = Awaited<ReturnType<typeof getExchangeRates>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExchangeRates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExchangeRatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExchangeRates>>> = ({ signal }) => getExchangeRates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExchangeRates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExchangeRatesQueryResult = NonNullable<Awaited<ReturnType<typeof getExchangeRates>>>
+export type GetExchangeRatesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get cached exchange rates based on KWD
+ */
+
+export function useGetExchangeRates<TData = Awaited<ReturnType<typeof getExchangeRates>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExchangeRates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExchangeRatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListCountriesUrl = () => {
+
+
+
+
+  return `/api/countries`
+}
+
+/**
+ * @summary Get translated countries and calling codes
+ */
+export const listCountries = async ( options?: Parameters<typeof customFetch>[1]): Promise<CountriesResponse> => {
+
+  return customFetch<CountriesResponse>(getListCountriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCountriesQueryKey = () => {
+    return [
+    `/api/countries`
+    ] as const;
+    }
+
+
+export const getListCountriesQueryOptions = <TData = Awaited<ReturnType<typeof listCountries>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCountries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCountriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCountries>>> = ({ signal }) => listCountries({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCountries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCountriesQueryResult = NonNullable<Awaited<ReturnType<typeof listCountries>>>
+export type ListCountriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get translated countries and calling codes
+ */
+
+export function useListCountries<TData = Awaited<ReturnType<typeof listCountries>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCountries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCountriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSuggestVisitorCountryUrl = () => {
+
+
+
+
+  return `/api/visitor-location`
+}
+
+/**
+ * @summary Suggest a visitor country from IP without storing it
+ */
+export const suggestVisitorCountry = async ( options?: Parameters<typeof customFetch>[1]): Promise<VisitorLocation> => {
+
+  return customFetch<VisitorLocation>(getSuggestVisitorCountryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSuggestVisitorCountryQueryKey = () => {
+    return [
+    `/api/visitor-location`
+    ] as const;
+    }
+
+
+export const getSuggestVisitorCountryQueryOptions = <TData = Awaited<ReturnType<typeof suggestVisitorCountry>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof suggestVisitorCountry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSuggestVisitorCountryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof suggestVisitorCountry>>> = ({ signal }) => suggestVisitorCountry({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof suggestVisitorCountry>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SuggestVisitorCountryQueryResult = NonNullable<Awaited<ReturnType<typeof suggestVisitorCountry>>>
+export type SuggestVisitorCountryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Suggest a visitor country from IP without storing it
+ */
+
+export function useSuggestVisitorCountry<TData = Awaited<ReturnType<typeof suggestVisitorCountry>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof suggestVisitorCountry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSuggestVisitorCountryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getCreateQuoteUrl = () => {
 

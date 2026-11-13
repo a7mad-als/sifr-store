@@ -3,15 +3,17 @@ import { Link, useParams } from 'wouter';
 import { FileQuestion } from 'lucide-react';
 import type { OrderConfirmation } from '@workspace/api-client-react';
 import { storeSettings } from '@workspace/sifr-data';
-import { formatKWD, useI18n, type TKey } from '@/lib/i18n';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { RECEIPT_KEY } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useMarket } from '@/lib/market';
 
 const TOPICS = [...storeSettings.serviceLinks, ...storeSettings.quickLinks.filter((l) => l.path.startsWith('/help/'))];
 const DRAFT = new Set(['returns', 'privacy', 'terms', 'shipping', 'payments']);
 
 function Tracking() {
   const { t, lang } = useI18n();
+  const { formatPrice } = useMarket();
   const r = useMemo<(OrderConfirmation & { placedAt?: string }) | null>(() => {
     try { const v = localStorage.getItem(RECEIPT_KEY); return v ? JSON.parse(v) : null; } catch { return null; }
   }, []);
@@ -20,7 +22,7 @@ function Tracking() {
     <dl className="mt-8 space-y-3 border border-[#1B2A41]/15 bg-[#FBF8F1] p-6 text-sm" data-testid="card-tracking">
       <div className="flex justify-between"><dt className="text-muted-foreground">{t('cf.number')}</dt><dd dir="ltr" className="font-mono text-[#B8893B]" data-testid="text-tracking-number">{r.orderNumber}</dd></div>
       {r.placedAt && <div className="flex justify-between"><dt className="text-muted-foreground">{t('co.s3')}</dt><dd>{new Date(r.placedAt).toLocaleString(lang === 'ar' ? 'ar-KW' : 'en-GB')}</dd></div>}
-      <div className="flex justify-between"><dt className="text-muted-foreground">{t('cf.total')}</dt><dd className="tabular-nums">{formatKWD(r.total, lang)}</dd></div>
+      <div className="flex justify-between"><dt className="text-muted-foreground">{t('cf.total')}</dt><dd className="tabular-nums">{formatPrice(r.total)}</dd></div>
       <p className="border-t border-[#1B2A41]/10 pt-3 font-medium">{t('help.trkStatus')}</p>
     </dl>
   );

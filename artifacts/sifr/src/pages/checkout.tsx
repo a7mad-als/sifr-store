@@ -1,16 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Check, ShieldAlert, ShoppingBag } from 'lucide-react';
-import { useCreateOrder, type Book, type OrderInputCountry } from '@workspace/api-client-react';
+import { useCreateOrder, type Book } from '@workspace/api-client-react';
 import { BookCover } from '@/components/brand';
 import { useBooksById } from '@/components/shell';
-import { formatKWD, formatNum, useI18n, type TKey } from '@/lib/i18n';
-import { destinations, shippingFor } from '@workspace/sifr-data';
+import { formatNum, useI18n, type TKey } from '@/lib/i18n';
+import { estimateShipping, shippingZones } from '@workspace/sifr-data';
 import { getAdapter, paymentAdapters, type PaymentMethod } from '@/lib/payment';
 import { RECEIPT_KEY, useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useMarket } from '@/lib/market';
 
-type Fields = { name: string; email: string; phone: string; country: OrderInputCountry; city: string; address: string };
+type Fields = { name: string; email: string; phone: string; country: string; city: string; address: string };
 type Errs = Partial<Record<keyof Fields, TKey>>;
 
 export function DemoBanner() {
@@ -25,12 +26,13 @@ export function DemoBanner() {
 
 export default function Checkout() {
   const { t, pick, lang } = useI18n();
+  const { country, countries, formatPrice, setCountry } = useMarket();
   const { cart, clear } = useStore();
   const byId = useBooksById();
   const [, setLocation] = useLocation();
   const order = useCreateOrder();
   const [step, setStep] = useState<1 | 2>(1);
-  const [f, setF] = useState<Fields>({ name: '', email: '', phone: '', country: 'KW', city: '', address: '' });
+  const [f, setF] = useState<Fields>({ name: '', email: '', phone: '', country, city: '', address: '' });
   const [errs, setErrs] = useState<Errs>({});
   const [pm, setPm] = useState<PaymentMethod>('knet');
   const [failed, setFailed] = useState(false);
@@ -38,8 +40,11 @@ export default function Checkout() {
   const lines = Object.entries(cart).map(([id, qty]) => ({ book: byId.get(Number(id)), qty, id: Number(id) }));
   const known = lines.filter((l): l is { book: Book; qty: number; id: number } => !!l.book);
   const subtotal = known.reduce((s, l) => s + l.book.price * l.qty, 0);
-  const ship = shippingFor(f.country);
-  const countryName = (c: string) => pick(destinations.find((d) => d.code === c)?.name ?? { ar: c, en: c });
+  const weightKg = known.reduce((sum, item) => sum + item.book.weightKg * item.qty, 0);
+  const ship = estimateShipping(f.country, weightKg);
+  const shipZone = shippingZones.find(zone => zone.id === ship.zone);
+  const selectedCountry = countries.find((item) => item.code === f.country);
+  const countryName = (c: string) => pick(countries.find((item) => item.code === c)?.name ?? { ar: c, en: c });
 
   const validate = () => {
     const e: Errs = {};
@@ -59,7 +64,9 @@ export default function Checkout() {
     try {
       const res = await order.mutateAsync({
         data: {
-          name: f.name.trim(), email: f.email.trim(), phone: f.phone.trim(), country: f.country, city: f.city.trim(), address: f.address.trim(),
+          name: f.name.trim(), email: f.email.trim(),
+          phone: f.phone.trim().startsWith('+') ? f.phone.trim() : `${selectedCountry?.callingCode ?? ''} ${f.phone.trim()}`.trim(),
+          country: f.country, city: f.city.trim(), address: f.address.trim(),
           paymentMethod: pm,
           items: known.map((l) => ({ bookId: l.id, quantity: l.qty })),
         },
@@ -108,7 +115,10 @@ export default function Checkout() {
   const field = (k: Exclude<keyof Fields, 'country'>, label: TKey, type = 'text', wide = false, ltr = false) => (
     <label className={cn('block', wide && 'sm:col-span-2')}>
       <span className="text-sm text-[#1B2A41]/80">{t(label)}</span>
-      <input type={type} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} aria-invalid={!!errs[k]} dir={ltr ? 'ltr' : undefined} autoComplete={k === 'address' ? 'street-address' : k === 'city' ? 'address-level2' : k === 'phone' ? 'tel' : k} className={cn(input, ltr && 'text-start')} data-testid={`input-${k}`} />
+      <div className={k === 'phone' ? 'mt-2 flex items-center gap-3 border border-[#1B2A41]/20 bg-[#FBF8F1] px-3 focus-within:border-[#B8893B]' : undefined} dir={k === 'phone' ? 'ltr' : ltr ? 'ltr' : undefined}>
+        {k === 'phone' && <span className="shrink-0 text-sm text-[#B8893B]" data-testid="text-checkout-calling-code">{selectedCountry?.callingCode || '+'}</span>}
+        <input type={type} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} placeholder={k === 'phone' ? '...' : undefined} aria-invalid={!!errs[k]} autoComplete={k === 'address' ? 'street-address' : k === 'city' ? 'address-level2' : k === 'phone' ? 'tel' : k} className={cn(input, k === 'phone' && 'mt-0 border-0 bg-transparent px-0', ltr && 'text-start')} data-testid={`input-${k}`} />
+      </div>
       {errs[k] && <span className="mt-1 block text-xs text-destructive">{t(errs[k]!)}</span>}
     </label>
   );
@@ -130,8 +140,8 @@ export default function Checkout() {
                 {field('phone', 'co.phone', 'tel', false, true)}
                 <label className="block">
                   <span className="text-sm text-[#1B2A41]/80">{t('co.country')}</span>
-                  <select value={f.country} onChange={(e) => setF({ ...f, country: e.target.value as OrderInputCountry })} className={input} data-testid="select-country">
-                    {destinations.map((d) => <option key={d.code} value={d.code}>{pick(d.name)} — {formatKWD(d.demoShipping, lang)}</option>)}
+                  <select value={f.country} onChange={(e) => { setF({ ...f, country: e.target.value }); setCountry(e.target.value); }} className={input} data-testid="select-country">
+                    {countries.map((d) => <option key={d.code} value={d.code}>{pick(d.name)}</option>)}
                   </select>
                 </label>
                 {field('city', 'co.city')}
@@ -190,16 +200,21 @@ export default function Checkout() {
                     <p className="leading-snug">{pick(book.title)}</p>
                     <p className="text-xs text-muted-foreground">× {formatNum(qty, lang)}</p>
                   </div>
-                  <span className="text-sm tabular-nums">{formatKWD(book.price * qty, lang)}</span>
+                   <span className="text-sm tabular-nums">{formatPrice(book.price * qty)}</span>
                 </li>
               ))}
             </ul>
             <dl className="mt-6 space-y-2 border-t border-[#1B2A41]/10 pt-4 text-sm">
-              <div className="flex justify-between"><dt className="text-muted-foreground">{t('cart.subtotal')}</dt><dd className="tabular-nums">{formatKWD(subtotal, lang)}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">{t('co.shipping')}</dt><dd className="tabular-nums">{formatKWD(ship, lang)}</dd></div>
-              <div className="flex justify-between border-t border-[#1B2A41]/10 pt-3 text-lg font-semibold"><dt>{t('co.total')}</dt><dd className="tabular-nums" data-testid="text-estimated-total">{formatKWD(subtotal + ship, lang)}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">{t('cart.subtotal')}</dt><dd className="tabular-nums">{formatPrice(subtotal)}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-muted-foreground">{t('co.shipping')}{shipZone ? ` · ${pick(shipZone.name)}` : ''}</dt><dd className="tabular-nums">{formatPrice(ship.amountKwd)}</dd></div>
+              <div className="flex justify-between border-t border-[#1B2A41]/10 pt-3 text-lg font-semibold"><dt>{t('co.total')}</dt><dd className="tabular-nums" data-testid="text-estimated-total">{formatPrice(subtotal + ship.amountKwd)}</dd></div>
             </dl>
-            <p className="mt-4 text-xs font-light text-muted-foreground">{t('co.serverNote')}</p>
+            <div className="mt-4 space-y-2 text-xs font-light text-muted-foreground" data-testid="text-shipping-details">
+              <p>{formatNum(ship.minDays, lang)}–{formatNum(ship.maxDays, lang)} {t('market.days')} · {formatNum(ship.weightKg, lang)} {t('market.weight')}</p>
+              <p>{t('market.currencyDisclaimer')}</p>
+              <p>{t('market.shippingDisclaimer')}</p>
+              <p>{t('co.serverNote')}</p>
+            </div>
           </aside>
         </div>
       </div>

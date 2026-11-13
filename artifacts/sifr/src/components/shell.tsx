@@ -7,9 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { BookCover, Logo } from '@/components/brand';
 import { BookFlags, useBookActions } from '@/components/book-card';
 import { useBookMeta } from '@/lib/catalog';
-import { formatKWD, formatNum, useI18n, type TKey } from '@/lib/i18n';
+import { formatNum, useI18n, type TKey } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { MarketSelectors, useMarket } from '@/lib/market';
+import { estimateShipping, shippingZones } from '@workspace/sifr-data';
 
 export function useGoTo() {
   const [loc, setLocation] = useLocation();
@@ -69,6 +71,9 @@ export function Nav() {
           />
         </form>
         <div className="ms-auto flex items-center gap-1 md:ms-0">
+          <div className="hidden items-center gap-1.5 md:flex">
+            <MarketSelectors />
+          </div>
           <button type="button" onClick={toggle} className="hidden h-10 items-center gap-1.5 px-3 text-xs font-medium text-[#1B2A41] transition-colors hover:bg-[#1B2A41] hover:text-[#F6F1E7] sm:flex" data-testid="button-lang">
             <Languages className="h-4 w-4" /> {t('nav.lang')}
           </button>
@@ -100,9 +105,12 @@ export function Nav() {
                 </button>
               ))}
             </nav>
-            <button type="button" onClick={toggle} className="mt-auto flex items-center justify-center gap-2 border border-[#F6F1E7]/30 py-3 text-sm transition-colors hover:bg-[#F6F1E7] hover:text-[#1B2A41]" data-testid="button-mobile-lang">
-              <Languages className="h-4 w-4" /> {t('nav.lang')}
-            </button>
+            <div className="mt-auto space-y-5">
+              <MarketSelectors mobile />
+              <button type="button" onClick={toggle} className="flex w-full items-center justify-center gap-2 border border-[#F6F1E7]/30 py-3 text-sm transition-colors hover:bg-[#F6F1E7] hover:text-[#1B2A41]" data-testid="button-mobile-lang">
+                <Languages className="h-4 w-4" /> {t('nav.lang')}
+              </button>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
@@ -158,11 +166,15 @@ export function CatalogueSync() {
 
 export function CartDrawer() {
   const { t, pick, lang } = useI18n();
+  const { country, countries, formatPrice, setCountry } = useMarket();
   const { cart, cartOpen, setCartOpen, setQty, remove } = useStore();
   const byId = useBooksById();
   const [, setLocation] = useLocation();
   const lines = Object.entries(cart).map(([id, qty]) => ({ book: byId.get(Number(id)), qty, id: Number(id) })).filter((l): l is { book: Book; qty: number; id: number } => !!l.book);
   const subtotal = lines.reduce((s, l) => s + l.book.price * l.qty, 0);
+  const cartWeight = lines.reduce((sum, line) => sum + line.book.weightKg * line.qty, 0);
+  const shipping = estimateShipping(country, cartWeight);
+  const shippingZone = shippingZones.find(zone => zone.id === shipping.zone);
   return (
     <DrawerShell
       open={cartOpen}
@@ -173,9 +185,19 @@ export function CartDrawer() {
         <div className="border-t border-[#1B2A41]/10 bg-[#EFE7D6] px-6 py-5">
           <div className="flex items-baseline justify-between">
             <span className="text-sm text-muted-foreground">{t('cart.subtotal')}</span>
-            <span className="text-2xl font-semibold tabular-nums" data-testid="text-cart-subtotal">{formatKWD(subtotal, lang)}</span>
+            <span className="text-2xl font-semibold tabular-nums" data-testid="text-cart-subtotal">{formatPrice(subtotal)}</span>
           </div>
-          <p className="mt-2 text-xs font-light text-muted-foreground">{t('cart.shipNote')}</p>
+          <p className="mt-2 text-xs font-light text-muted-foreground" data-testid="text-cart-currency-note">{t('market.currencyDisclaimer')}</p>
+          <label className="mt-4 block text-xs text-[#1B2A41]/65">{t('market.country')}
+            <select value={country} onChange={event => setCountry(event.target.value)} className="mt-1 h-10 w-full border border-[#1B2A41]/20 bg-[#F6F1E7] px-3 text-sm text-[#1B2A41]" data-testid="select-cart-country">
+              {countries.map(item => <option key={item.code} value={item.code}>{pick(item.name)}</option>)}
+            </select>
+          </label>
+          <div className="mt-3 text-xs font-light text-muted-foreground" data-testid="text-cart-shipping-estimate">
+            <p>{t('co.shipping')}: <strong className="font-medium text-[#1B2A41]">{formatPrice(shipping.amountKwd)}</strong>{shippingZone ? ` · ${pick(shippingZone.name)}` : ''}</p>
+            <p>{formatNum(shipping.minDays, lang)}–{formatNum(shipping.maxDays, lang)} {t('market.days')} · {formatNum(cartWeight, lang)} {t('market.weight')} ({formatNum(0.5, lang)} kg {t('market.each')})</p>
+            <p className="mt-1">{t('market.shippingDisclaimer')}</p>
+          </div>
           <button type="button" onClick={() => { setCartOpen(false); setLocation('/checkout'); }} className="mt-4 w-full bg-[#1B2A41] py-4 text-sm font-medium text-[#F6F1E7] transition-colors duration-300 hover:bg-[#B8893B] hover:text-[#1B2A41]" data-testid="button-checkout">
             {t('cart.checkout')}
           </button>
@@ -198,7 +220,7 @@ export function CartDrawer() {
                     <span className="w-8 text-center text-sm tabular-nums" data-testid={`text-qty-${book.id}`}>{formatNum(qty, lang)}</span>
                     <button type="button" onClick={() => setQty(book.id, qty + 1)} disabled={qty >= 99} aria-label={t('cart.inc')} className="grid h-8 w-8 place-items-center transition-colors hover:bg-[#1B2A41] hover:text-[#F6F1E7] disabled:opacity-30" data-testid={`button-inc-${book.id}`}><Plus className="h-3 w-3" /></button>
                   </div>
-                  <span className="text-sm font-semibold tabular-nums">{formatKWD(book.price * qty, lang)}</span>
+                  <span className="text-sm font-semibold tabular-nums">{formatPrice(book.price * qty)}</span>
                 </div>
               </div>
               <button type="button" onClick={() => remove(book.id)} aria-label={`${t('cart.remove')} ${pick(book.title)}`} className="self-start p-1.5 text-muted-foreground transition-colors hover:text-destructive" data-testid={`button-remove-${book.id}`}>
@@ -214,6 +236,7 @@ export function CartDrawer() {
 
 export function FavDrawer() {
   const { t, pick, lang } = useI18n();
+  const { formatPrice } = useMarket();
   const { favs, favOpen, setFavOpen, toggleFav, setQuick } = useStore();
   const byId = useBooksById();
   const { addToCart } = useBookActions();
@@ -233,7 +256,7 @@ export function FavDrawer() {
                 <p className="text-sm font-medium">{pick(book.title)}</p>
                 <p className="text-xs font-light text-muted-foreground">{book.author.ar || book.author.en ? pick(book.author) : t('b.unknown')}</p>
                 <div className="mt-auto flex items-center justify-between pt-3">
-                  <span className="text-sm font-semibold tabular-nums">{formatKWD(book.price, lang)}</span>
+                   <span className="text-sm font-semibold tabular-nums">{formatPrice(book.price)}</span>
                   <div className="flex gap-1">
                     <button type="button" onClick={() => addToCart(book)} className="border border-[#1B2A41] px-3 py-1.5 text-xs transition-colors hover:bg-[#1B2A41] hover:text-[#F6F1E7]" data-testid={`button-fav-add-${book.id}`}>{t('b.add')}</button>
                     <button type="button" onClick={() => toggleFav(book.id)} aria-label={t('b.unfav')} className="p-1.5 text-muted-foreground hover:text-destructive" data-testid={`button-fav-remove-${book.id}`}><Trash2 className="h-4 w-4" /></button>
@@ -250,6 +273,7 @@ export function FavDrawer() {
 
 export function QuickView() {
   const { t, pick, lang } = useI18n();
+  const { formatPrice } = useMarket();
   const { quick, setQuick, favs } = useStore();
   const { addToCart, fav } = useBookActions();
   const m = useBookMeta();
@@ -284,7 +308,7 @@ export function QuickView() {
                 ))}
               </dl>
               <div className="mt-8 flex items-center gap-3">
-                <span className="flex flex-col"><span className="text-2xl font-semibold tabular-nums">{formatKWD(b.price, lang)}</span><span className="text-[10px] text-muted-foreground">{t('b.demoPrice')}</span></span>
+                <span className="flex flex-col"><span className="text-2xl font-semibold tabular-nums">{formatPrice(b.price)}</span><span className="text-[10px] text-muted-foreground">{t('b.demoPrice')}</span></span>
                 <button type="button" onClick={() => addToCart(b)} className="ms-auto bg-[#1B2A41] px-5 py-3 text-sm text-[#F6F1E7] transition-colors duration-300 hover:bg-[#B8893B] hover:text-[#1B2A41]" data-testid="button-quick-add">{t('b.add')}</button>
                 <button type="button" onClick={() => fav(b)} aria-pressed={favs.includes(b.id)} aria-label={favs.includes(b.id) ? t('b.unfav') : t('b.fav')} className="grid h-11 w-11 place-items-center border border-[#1B2A41]/30 transition-colors hover:border-[#B8893B] hover:text-[#B8893B]" data-testid="button-quick-fav">
                   <Heart className={cn('h-4 w-4', favs.includes(b.id) && 'fill-[#B8893B] text-[#B8893B]')} />

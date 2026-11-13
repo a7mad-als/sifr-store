@@ -1,19 +1,21 @@
 import { useMemo, type ReactNode } from 'react';
 import { BadgeCheck, Handshake, Layers, Lock, Truck } from 'lucide-react';
 import type { Book } from '@workspace/api-client-react';
-import { destinations, taxonomy } from '@workspace/sifr-data';
+import { estimateShipping, shippingZones, taxonomy } from '@workspace/sifr-data';
 import { BookCard, BookCardSkeleton, BookFlags } from '@/components/book-card';
 import { BookCover } from '@/components/brand';
 import { Arrow, SectionHead } from '@/components/section';
 import { useGoTo } from '@/components/shell';
 import { useBookMeta } from '@/lib/catalog';
-import { formatKWD, formatNum, useI18n, type TKey } from '@/lib/i18n';
+import { formatNum, useI18n, type TKey } from '@/lib/i18n';
+import { useMarket } from '@/lib/market';
 import { useStore } from '@/lib/store';
 
 export const FEATURED_ID = 13;
 
 export function Hero({ books }: { books: Book[] | undefined }) {
   const { t, lang } = useI18n();
+  const { countries } = useMarket();
   const go = useGoTo();
   const list = books ?? [];
   const lead = list.find((b) => b.id === FEATURED_ID);
@@ -34,7 +36,7 @@ export function Hero({ books }: { books: Book[] | undefined }) {
             <button type="button" onClick={() => go('partnerships')} className="group flex items-center gap-3 border border-[#1B2A41] px-7 py-4 text-sm font-medium text-[#1B2A41] transition-colors duration-300 hover:bg-[#1B2A41] hover:text-[#F6F1E7]" data-testid="button-hero-partners"><Handshake className="h-4 w-4" /> {t('hero.bulk')}</button>
           </div>
           <dl className="rise mt-14 grid max-w-lg grid-cols-3 border-t border-[#1B2A41]/15 pt-6" style={{ animationDelay: '400ms' }}>
-            {([[list.length, 'hero.stat1'], [usedCats || taxonomy.length, 'hero.stat2'], [destinations.length, 'hero.stat3']] as [number, TKey][]).map(([n, k]) => (
+            {([[list.length, 'hero.stat1'], [usedCats || taxonomy.length, 'hero.stat2'], [countries.length, 'hero.stat3']] as [number, TKey][]).map(([n, k]) => (
               <div key={k}>
                 <dt className="sr-only">{t(k)}</dt>
                 <dd className="text-3xl font-semibold tabular-nums text-[#1B2A41]" data-testid={`stat-${k}`}>{formatNum(n, lang)}</dd>
@@ -81,6 +83,7 @@ export function Benefits() {
 
 export function FeaturedRelease({ books, isLoading }: { books: Book[] | undefined; isLoading: boolean }) {
   const { t, pick, lang } = useI18n();
+  const { formatPrice } = useMarket();
   const { setQuick } = useStore();
   const m = useBookMeta();
   const b = books?.find((x) => x.id === FEATURED_ID);
@@ -111,7 +114,7 @@ export function FeaturedRelease({ books, isLoading }: { books: Book[] | undefine
           <BookFlags book={b} className="mt-5" />
           <div className="mt-8 flex flex-wrap items-center gap-5">
             <button type="button" onClick={() => setQuick(b)} className="group flex items-center gap-3 bg-[#1B2A41] px-7 py-4 text-sm text-[#F6F1E7] transition-colors hover:bg-[#B8893B] hover:text-[#1B2A41]" data-testid="button-featured-view">{t('feat.view')} <Arrow /></button>
-            <span className="text-2xl font-semibold tabular-nums">{formatKWD(b.price, lang)}</span>
+            <span className="text-2xl font-semibold tabular-nums">{formatPrice(b.price)}</span>
             <span className="text-xs text-muted-foreground">{t('b.demoPrice')}</span>
           </div>
         </div>
@@ -193,28 +196,30 @@ export function Categories({ books }: { books: Book[] | undefined }) {
 
 export function ShipTo() {
   const { t, pick, lang } = useI18n();
-  const tiers = [2, 5, 8].map((rate) => ({ rate, list: destinations.filter((d) => d.demoShipping === rate) }));
-  const names: Record<number, TKey> = { 2: 'ship.kw', 5: 'ship.gulf', 8: 'ship.other' };
+  const { countries, formatPrice } = useMarket();
+  const samples: Record<string, string> = { gulf: "KW", levantEgypt: "SY", maghreb: "MA", arabOther: "YE", turkey: "TR", russiaCaucasus: "RU", restWorld: "US" };
   return (
     <section id="shipping" className="scroll-mt-24 bg-[#1B2A41] text-[#F6F1E7]" data-testid="section-ship-to">
       <div className="mx-auto max-w-7xl px-5 py-24 md:px-8 md:py-28">
         <SectionHead kicker={t('ship.kicker')} title={t('ship.title')} invert>
-          <p className="text-5xl font-semibold tabular-nums text-[#B8893B]">{formatNum(destinations.length, lang)} <span className="text-base font-light text-[#F6F1E7]/60">{t('ship.count')}</span></p>
+          <p className="text-5xl font-semibold tabular-nums text-[#B8893B]">{formatNum(countries.length, lang)} <span className="text-base font-light text-[#F6F1E7]/60">{t('ship.count')}</span></p>
         </SectionHead>
-        <div className="mt-14 grid gap-px bg-[#F6F1E7]/10 lg:grid-cols-[1fr_1fr_2fr]">
-          {tiers.map(({ rate, list }) => (
-            <div key={rate} className="bg-[#1B2A41] p-6 md:p-8">
+        <div className="mt-14 grid gap-px bg-[#F6F1E7]/10 sm:grid-cols-2 lg:grid-cols-3">
+          {shippingZones.map((zone) => {
+            const estimate = estimateShipping(samples[zone.id] ?? "US", 0.5);
+            return (
+            <div key={zone.id} className="bg-[#1B2A41] p-6 md:p-8" data-testid={`card-shipping-zone-${zone.id}`}>
               <div className="flex items-baseline justify-between border-b border-[#F6F1E7]/10 pb-4">
-                <h3 className="text-lg font-medium">{t(names[rate])}</h3>
-                <span className="tabular-nums text-[#B8893B]">{formatKWD(rate, lang)}</span>
+                <h3 className="text-lg font-medium">{pick(zone.name)}</h3>
+                <span className="tabular-nums text-[#B8893B]">{formatPrice(estimate.amountKwd)}</span>
               </div>
-              <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm font-light text-[#F6F1E7]/80">
-                {list.map((d) => <li key={d.code} className="flex items-center gap-2" data-testid={`text-dest-${d.code}`}><span className="h-1.5 w-1.5 rotate-45 bg-[#B8893B]" />{pick(d.name)}</li>)}
-              </ul>
+              <p className="mt-4 text-sm font-light text-[#F6F1E7]/75">{formatNum(estimate.minDays, lang)}–{formatNum(estimate.maxDays, lang)} {t('market.days')}</p>
+              <p className="mt-2 text-xs font-light text-[#F6F1E7]/55">{t('ship.includedWeight')} · + {formatPrice(zone.perExtraKgKwd)} {t('ship.perKg')}</p>
             </div>
-          ))}
+            );
+          })}
         </div>
-        <p className="mt-8 max-w-3xl border-s-2 border-[#B8893B] ps-4 text-sm font-light leading-7 text-[#F6F1E7]/70" role="note">{t('ship.note')}</p>
+        <p className="mt-8 max-w-3xl border-s-2 border-[#B8893B] ps-4 text-sm font-light leading-7 text-[#F6F1E7]/70" role="note">{t('market.shippingDisclaimer')}</p>
       </div>
     </section>
   );

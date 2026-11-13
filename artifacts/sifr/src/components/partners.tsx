@@ -1,25 +1,28 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useCreateQuote, type QuoteInputContactMethod, type QuoteInputEntityType } from '@workspace/api-client-react';
-import { destinations, partnerTracks, storeSettings } from '@workspace/sifr-data';
+import { partnerTracks, storeSettings } from '@workspace/sifr-data';
 import { Arrow } from '@/components/section';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useMarket } from '@/lib/market';
 
 type F = { entityType: QuoteInputEntityType | ''; name: string; country: string; countryOther: string; contactMethod: QuoteInputContactMethod; contact: string; cooperation: string; message: string };
 type Errs = Partial<Record<keyof F, TKey>>;
 const EMPTY: F = { entityType: '', name: '', country: '', countryOther: '', contactMethod: 'email', contact: '', cooperation: '', message: '' };
-const OTHER = '__other';
 
 export function Partners() {
   const { t, pick } = useI18n();
+  const { country, countries, setCountry } = useMarket();
   const quote = useCreateQuote();
-  const [f, setF] = useState<F>(EMPTY);
+  const [f, setF] = useState<F>({ ...EMPTY, country });
+  const [countryTouched, setCountryTouched] = useState(false);
   const [errs, setErrs] = useState<Errs>({});
   const [ref, setRef] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const firstRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (!countryTouched) setF(previous => ({ ...previous, country })); }, [country, countryTouched]);
 
   const choose = (id: QuoteInputEntityType) => {
     const tr = partnerTracks.find((p) => p.id === id)!;
@@ -34,7 +37,6 @@ export function Partners() {
     if (!f.entityType) e.entityType = 'v.req';
     if (f.name.trim().length < 2) e.name = 'v.min2';
     if (!f.country) e.country = 'v.req';
-    if (f.country === OTHER && f.countryOther.trim().length < 2) e.countryOther = 'v.min2';
     if (f.contactMethod === 'email' ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.contact.trim()) : !/^\+?[0-9\s()-]{7,25}$/.test(f.contact.trim())) e.contact = f.contactMethod === 'email' ? 'v.email' : 'v.phone';
     if (f.cooperation.trim().length < 2) e.cooperation = 'v.min2';
     if (f.message.trim().length < 5) e.message = 'v.min5';
@@ -46,9 +48,12 @@ export function Partners() {
     e.preventDefault();
     setFailed(false);
     if (!validate() || !f.entityType) return;
-    const country = f.country === OTHER ? f.countryOther.trim() : destinations.find((d) => d.code === f.country)?.name.en ?? f.country;
+    const selectedCountry = countries.find((item) => item.code === f.country);
+    const localContact = f.contactMethod !== 'email' && !f.contact.trim().startsWith('+') && selectedCountry?.callingCode
+      ? `${selectedCountry.callingCode} ${f.contact.trim()}`
+      : f.contact.trim();
     try {
-      const r = await quote.mutateAsync({ data: { entityType: f.entityType, name: f.name.trim(), country, contactMethod: f.contactMethod, contact: f.contact.trim(), cooperation: f.cooperation.trim(), message: f.message.trim() } });
+      const r = await quote.mutateAsync({ data: { entityType: f.entityType, name: f.name.trim(), country: f.country, contactMethod: f.contactMethod, contact: localContact, cooperation: f.cooperation.trim(), message: f.message.trim() } });
       setRef(r.reference);
     } catch { setFailed(true); }
   };
@@ -110,20 +115,13 @@ export function Partners() {
                 </label>
                 <label className="block">
                   <span className="text-xs text-[#F6F1E7]/60">{t('p.country')}</span>
-                  <select value={f.country} onChange={(e) => set('country', e.target.value)} aria-invalid={!!errs.country} className={inp} data-testid="select-partner-country">
+                  <select value={f.country} onChange={(e) => { setCountryTouched(true); set('country', e.target.value); setCountry(e.target.value); }} aria-invalid={!!errs.country} className={inp} data-testid="select-partner-country">
                     <option value="" disabled>{t('p.choose')}</option>
-                    {destinations.map((d) => <option key={d.code} value={d.code}>{pick(d.name)}</option>)}
-                    <option value={OTHER}>{t('p.other')}</option>
+                    {countries.map((d) => <option key={d.code} value={d.code}>{pick(d.name)}</option>)}
                   </select>
                   {err('country')}
                 </label>
-                {f.country === OTHER ? (
-                  <label className="block">
-                    <span className="text-xs text-[#F6F1E7]/60">{t('p.countryOther')}</span>
-                    <input value={f.countryOther} maxLength={100} onChange={(e) => set('countryOther', e.target.value)} aria-invalid={!!errs.countryOther} className={inp} data-testid="input-partner-country-other" />
-                    {err('countryOther')}
-                  </label>
-                ) : <div className="hidden sm:block" />}
+                <div className="hidden sm:block" />
                 <fieldset className="sm:col-span-2">
                   <legend className="text-xs text-[#F6F1E7]/60">{t('p.method')}</legend>
                   <div className="mt-2 flex flex-wrap gap-2" role="radiogroup">
@@ -134,7 +132,14 @@ export function Partners() {
                 </fieldset>
                 <label className="block sm:col-span-2">
                   <span className="text-xs text-[#F6F1E7]/60">{t('p.contact')} — {t(`cm.${f.contactMethod}`)}</span>
-                  <input type={f.contactMethod === 'email' ? 'email' : 'tel'} dir="ltr" maxLength={200} value={f.contact} placeholder={f.contactMethod === 'email' ? 'name@example.com' : '+965 ...'} onChange={(e) => set('contact', e.target.value)} aria-invalid={!!errs.contact} className={cn(inp, 'text-start placeholder:text-[#F6F1E7]/25')} data-testid="input-partner-contact" />
+                  {f.contactMethod === 'email' ? (
+                    <input type="email" dir="ltr" maxLength={200} value={f.contact} placeholder="name@example.com" onChange={(e) => set('contact', e.target.value)} aria-invalid={!!errs.contact} className={cn(inp, 'text-start placeholder:text-[#F6F1E7]/25')} data-testid="input-partner-contact" />
+                  ) : (
+                    <div className="mt-2 flex items-center gap-3 border-b border-[#F6F1E7]/25 focus-within:border-[#B8893B]" dir="ltr">
+                      <span className="shrink-0 text-sm text-[#B8893B]" data-testid="text-partner-calling-code">{countries.find(item => item.code === f.country)?.callingCode || "+"}</span>
+                      <input type="tel" maxLength={200} value={f.contact} placeholder="..." onChange={(e) => set('contact', e.target.value)} aria-invalid={!!errs.contact} className="w-full bg-transparent py-2 text-start text-[#F6F1E7] outline-none placeholder:text-[#F6F1E7]/25" data-testid="input-partner-contact" />
+                    </div>
+                  )}
                   {err('contact')}
                 </label>
                 <label className="block sm:col-span-2">
