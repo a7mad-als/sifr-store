@@ -83,9 +83,11 @@ for (const lang of ["ar", "en"] as const) {
       await page.getByTestId("radio-partner-method-whatsapp").click();
       await page.getByTestId("input-partner-contact").fill("+0000000000");
       await page.getByTestId("input-partner-message").fill("Automated UI test, no external contact.");
+      await expect(page.getByTestId("button-partner-submit")).toContainText(lang === "ar" ? "احفظ الطلب" : "Save request");
       await page.getByTestId("button-partner-submit").click();
       await expect(page.getByTestId("status-partner-success")).toBeVisible();
       await expect(page.getByTestId("text-partner-reference")).toContainText("PARTNER-");
+      await expect(page.getByTestId("status-partner-success")).toContainText(lang === "ar" ? "لن تصلك رسالة تلقائية" : "you will not receive an automatic message");
       await expect(page.getByTestId("text-social-instagram")).toHaveAttribute("aria-disabled", "true");
       await expect(page.getByTestId("text-social-instagram").locator("a")).toHaveCount(0);
       await page.getByTestId("input-newsletter-email").fill("ui-test@example.test");

@@ -30,7 +30,7 @@ export const partnerTracks = [
 export const storeSettings = {
   demo: true,
   mission: l("إيصال كتب العلم الشرعي بطبعات متقنة لطلابه في كل مكان.", "Bringing carefully produced books of Islamic knowledge to students everywhere."),
-  partnershipResponse: l("كل تعاون يبدأ برسالة، ونرد خلال يومَي عمل", "Every collaboration starts with a message. We reply within two business days."),
+  partnershipResponse: l("زمن الرد المستهدف بعد تفعيل البريد يومَا عمل؛ لا يُرسل إشعار تلقائي حاليًا.", "The target response time is two business days once email is enabled; no automatic notification is sent now."),
   contact: {
     email: { value: "hello@sifr.example", url: null as string | null, placeholder: true },
     whatsapp: { value: "+965 XXXX XXXX", url: null as string | null, placeholder: true },

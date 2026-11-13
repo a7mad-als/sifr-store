@@ -35,4 +35,6 @@ test("temporary social and contact settings cannot masquerade as active links", 
   assert.ok(storeSettings.socials.every(s => s.url === null));
   assert.ok(Object.values(storeSettings.contact).every(s => s.placeholder && s.url === null));
   assert.equal(storeSettings.newsletter.deliveryConnected, false);
+  assert.match(storeSettings.partnershipResponse.ar, /بعد تفعيل البريد/);
+  assert.match(storeSettings.partnershipResponse.en, /once email is enabled/);
 });
