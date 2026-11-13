@@ -41,20 +41,45 @@ test("catalogue has all requested collections and stable, unique identifiers", a
 });
 
 test("demo checkout accepts expanded destinations and computes authoritative totals", async () => {
-  for (const [country, shipping] of [["KW", 2], ["SY", 8], ["PS", 8], ["TR", 8], ["RU-DA", 8], ["RU-CE", 8]]) {
+  for (const [country, shipping, zone] of [["KW", 5, "gulf"], ["SY", 8, "levantEgypt"], ["PS", 8, "levantEgypt"], ["TR", 9, "turkey"], ["RU-DA", 12, "russiaCaucasus"], ["RU-CE", 12, "russiaCaucasus"]]) {
     const result = await post("/orders", { ...delivery, country, price: 0 });
     assert.equal(result.status, 201, JSON.stringify(result));
     assert.equal(result.body.subtotal, 45);
     assert.equal(result.body.shipping, shipping);
     assert.equal(result.body.total, 45 + shipping);
+    assert.equal(result.body.shippingEstimate.zone, zone);
+    assert.equal(result.body.shippingEstimate.weightKg, 0.5);
     assert.equal(result.body.demo, true);
     assert.match(result.body.orderNumber, /^SIFR-/);
   }
+  const heavier = await post("/orders", {
+    ...delivery, country: "RU", items: [{ bookId: 13, quantity: 3 }],
+  });
+  assert.equal(heavier.status, 201);
+  assert.equal(heavier.body.shippingEstimate.weightKg, 1.5);
+  assert.equal(heavier.body.shipping, 15);
 });
 
 test("checkout rejects retired books and unsupported destinations", async () => {
   assert.equal((await post("/orders", { ...delivery, items: [{ bookId: 11, quantity: 1 }] })).status, 400);
-  assert.equal((await post("/orders", { ...delivery, country: "FR" })).status, 400);
+  assert.equal((await post("/orders", { ...delivery, country: "!!" })).status, 400);
+});
+
+test("country and exchange endpoints return the live global market data", async () => {
+  const [countryResponse, rateResponse] = await Promise.all([
+    fetch(`${base}/countries`), fetch(`${base}/exchange-rates`),
+  ]);
+  assert.equal(countryResponse.status, 200);
+  const countryData = await countryResponse.json();
+  assert.ok(countryData.countries.length >= 200);
+  assert.ok(countryData.countries.find(country => country.code === "KW")?.callingCode === "+965");
+  assert.ok(countryData.countries.find(country => country.code === "FR"));
+  assert.ok(countryData.countries.find(country => country.code === "RU-DA"));
+  assert.equal(rateResponse.status, 200);
+  const rateData = await rateResponse.json();
+  assert.equal(rateData.base, "KWD");
+  assert.ok(rateData.rates.SAR > 0);
+  assert.ok(rateData.rates.USD > 0);
 });
 
 test("all six partnership types work without a quantity or institutional email", async () => {

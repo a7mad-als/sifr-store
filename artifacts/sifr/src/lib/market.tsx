@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   getGetExchangeRatesQueryKey, getListCountriesQueryKey, getSuggestVisitorCountryQueryKey,
   useListCountries, useSuggestVisitorCountry, useGetExchangeRates, type Country, type ExchangeRates,
@@ -40,6 +40,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const [countryValue, setCountryValue] = useState(initialPrefs?.country ?? "KW");
   const [currencyValue, setCurrencyValue] = useState<Currency>(initialPrefs?.currency ?? "KWD");
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const suggestionHandled = useRef(false);
   const [geoEnabled] = useState(() => {
     if (initialPrefs || localStorage.getItem(GEO_SEEN_KEY)) return false;
     localStorage.setItem(GEO_SEEN_KEY, "1");
@@ -66,7 +67,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const code = geoQuery.data?.countryCode;
-    if (!code || suggestion) return;
+    if (!code || suggestion || suggestionHandled.current) return;
     const found = countries.find(item => item.code === code);
     if (!found) return;
     const currency = currencyOptions.some(item => item.code === found.currency) ? found.currency as Currency : "USD";
@@ -75,6 +76,8 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
   const setCountry = (code: string) => {
     if (!countries.some(item => item.code === code)) return;
+    suggestionHandled.current = true;
+    setSuggestion(null);
     setCountryValue(code);
     const found = countries.find(item => item.code === code);
     if (found) setCurrencyValue(currencyOptions.some(item => item.code === found.currency) ? found.currency as Currency : "USD");
@@ -84,6 +87,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   };
   const applySuggestion = () => {
     if (!suggestion) return;
+    suggestionHandled.current = true;
     setCountryValue(suggestion.country.code);
     setCurrencyValue(suggestion.currency);
     setLang(suggestion.language);
@@ -100,7 +104,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const value: MarketContext = {
     country: countryValue, currency: currencyValue, countries,
     rates: rateQuery.data, ratesLoading: rateQuery.isLoading, ratesUnavailable: rateQuery.isError,
-    suggestion, applySuggestion, dismissSuggestion: () => setSuggestion(null),
+    suggestion, applySuggestion, dismissSuggestion: () => { suggestionHandled.current = true; setSuggestion(null); },
     setCountry, setCurrency, formatPrice,
   };
   return <MarketCtx.Provider value={value}>{children}</MarketCtx.Provider>;
@@ -136,14 +140,14 @@ export function MarketSelectors({ mobile = false }: { mobile?: boolean }) {
   const common = "h-9 border border-[#1B2A41]/20 bg-[#F6F1E7] px-2 text-xs text-[#1B2A41] outline-none focus:border-[#B8893B]";
   return (
     <div className={mobile ? "grid grid-cols-2 gap-3" : "flex items-center gap-1.5"}>
-      <label className={mobile ? "block text-xs text-[#F6F1E7]/60" : "sr-only"}>
-        {mobile && <span className="mb-1 block">{t("market.country")}</span>}
+      <label className={mobile ? "block text-xs text-[#F6F1E7]/60" : "block"}>
+        <span className={mobile ? "mb-1 block" : "sr-only"}>{t("market.country")}</span>
         <select value={country} onChange={event => setCountry(event.target.value)} className={`${common} ${mobile ? "w-full" : "w-[112px]"}`} aria-label={t("market.country")} data-testid={mobile ? "select-mobile-country" : "select-nav-country"}>
           {countries.map(item => <option key={item.code} value={item.code}>{pick(item.name)}</option>)}
         </select>
       </label>
-      <label className={mobile ? "block text-xs text-[#F6F1E7]/60" : "sr-only"}>
-        {mobile && <span className="mb-1 block">{t("market.currency")}</span>}
+      <label className={mobile ? "block text-xs text-[#F6F1E7]/60" : "block"}>
+        <span className={mobile ? "mb-1 block" : "sr-only"}>{t("market.currency")}</span>
         <select value={currency} onChange={event => setCurrency(event.target.value)} className={`${common} ${mobile ? "w-full" : "w-[92px]"}`} aria-label={t("market.currency")} data-testid={mobile ? "select-mobile-currency" : "select-nav-currency"}>
           {currencyOptions.map(item => <option key={item.code} value={item.code}>{item.code} — {pick(item.name)}</option>)}
         </select>

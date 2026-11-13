@@ -52,7 +52,7 @@ export function Nav() {
         <Link href="/" onClick={() => go('top')} className="text-[#1B2A41]" data-testid="link-logo" aria-label={t('nav.home')}>
           <Logo />
         </Link>
-        <nav className="hidden items-center gap-7 lg:flex" aria-label="primary">
+        <nav className="hidden items-center gap-7 xl:flex" aria-label="primary">
           {links.map(([k, id]) => (
             <button key={k} type="button" onClick={() => go(id)} className="link-u py-1 text-sm text-[#1B2A41]/80 hover:text-[#1B2A41]" data-testid={`link-nav-${id}`}>
               {t(k)}
@@ -71,7 +71,7 @@ export function Nav() {
           />
         </form>
         <div className="ms-auto flex items-center gap-1 md:ms-0">
-          <div className="hidden items-center gap-1.5 md:flex">
+          <div className="hidden items-center gap-1.5 xl:flex">
             <MarketSelectors />
           </div>
           <button type="button" onClick={toggle} className="hidden h-10 items-center gap-1.5 px-3 text-xs font-medium text-[#1B2A41] transition-colors hover:bg-[#1B2A41] hover:text-[#F6F1E7] sm:flex" data-testid="button-lang">
@@ -83,7 +83,7 @@ export function Nav() {
           <button type="button" onClick={() => setCartOpen(true)} className={iconBtn} aria-label={`${t('nav.cart')} ${cartCount}`} data-testid="button-open-cart">
             <ShoppingBag className="h-5 w-5" /><CountBadge n={cartCount} />
           </button>
-          <button type="button" onClick={() => setOpen(true)} className={cn(iconBtn, 'lg:hidden')} aria-label={t('nav.menu')} data-testid="button-menu">
+          <button type="button" onClick={() => setOpen(true)} className={cn(iconBtn, 'xl:hidden')} aria-label={t('nav.menu')} data-testid="button-menu">
             <Menu className="h-5 w-5" />
           </button>
         </div>

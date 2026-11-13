@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { books } from "../lib/sifr-data/src/catalogue.ts";
 import { taxonomy } from "../lib/sifr-data/src/taxonomy.ts";
-import { destinations, shippingFor, partnerTracks, storeSettings } from "../lib/sifr-data/src/settings.ts";
+import { destinations, shippingFor, partnerTracks, storeSettings, currencyOptions, estimateShipping, shippingZones } from "../lib/sifr-data/src/settings.ts";
 
 test("all catalogue classifications belong to the hierarchical taxonomy", () => {
   assert.equal(taxonomy.length, 9);
@@ -23,10 +23,18 @@ test("destination configuration includes all Arab League states and requested re
     assert.ok(codes.includes(code), `Missing destination ${code}`);
   }
   assert.equal(new Set(codes).size, 26);
-  assert.equal(shippingFor("KW"), 2);
+  assert.equal(shippingFor("KW"), 5);
   assert.equal(shippingFor("SA"), 5);
-  assert.equal(shippingFor("RU-CE"), 8);
-  assert.throws(() => shippingFor("FR"), /Unsupported/);
+  assert.equal(shippingFor("RU-CE"), 12);
+  assert.equal(shippingFor("FR"), 15);
+  assert.throws(() => shippingFor("!!"), /Unsupported/);
+  assert.equal(shippingZones.length, 7);
+  assert.deepEqual(estimateShipping("KW", 1.1), {
+    amountKwd: 6.5, zone: "gulf", minDays: 3, maxDays: 7, weightKg: 1.1,
+  });
+  assert.ok(currencyOptions.some(item => item.code === "SAR"));
+  assert.ok(currencyOptions.some(item => item.code === "RUB"));
+  assert.ok(books.every(book => book.weightKg === 0.5));
 });
 
 test("temporary social and contact settings cannot masquerade as active links", () => {

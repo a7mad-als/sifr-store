@@ -19,8 +19,8 @@ for (const lang of ["ar", "en"] as const) {
       await expect(page.getByTestId("text-featured-title")).toContainText(lang === "ar" ? "تعليق المصابيح" : "Masabih");
       await expect(page.locator("#books article")).toHaveCount(36);
       await expect(page.getByTestId("section-dar-taqwa").locator("article")).toHaveCount(4);
-      await expect(page.getByTestId("section-ship-to").getByTestId("text-dest-SY")).toBeAttached();
-      await expect(page.getByTestId("text-dest-RU-DA")).toContainText(lang === "ar" ? "روسيا" : "Russia");
+      await expect(page.getByTestId("section-ship-to").getByTestId("card-shipping-zone-gulf")).toBeAttached();
+      await expect(page.getByTestId("section-ship-to").getByTestId("card-shipping-zone-russiaCaucasus")).toBeAttached();
       await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sifr.cart") ?? "{}"))).toEqual({ 13: 1 });
       await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sifr.favs") ?? "[]"))).toEqual([13]);
       await expect(page.locator("#books").getByTestId("text-publisher-28")).toContainText(lang === "ar" ? "دار المنهاج" : "Dar al-Minhaj");
@@ -97,9 +97,16 @@ for (const lang of ["ar", "en"] as const) {
 
       await page.getByTestId("button-open-cart").click();
       await expect(page.getByTestId("row-cart-13")).toBeVisible();
+      await page.getByTestId("select-cart-country").selectOption("RU-CE");
+      const estimate = page.getByTestId("text-cart-shipping-estimate");
+      const initialShipping = await estimate.locator("p").nth(0).innerText();
+      await expect(estimate.locator("p").nth(1)).toContainText(/0\.5|٠٫٥/);
+      await page.getByTestId("button-inc-13").click();
+      await expect(estimate.locator("p").nth(1)).toContainText(/1|١/);
+      await expect(estimate.locator("p").nth(0)).not.toHaveText(initialShipping);
       await page.getByTestId("button-checkout").click();
       await expect(page).toHaveURL(/\/checkout/);
-      await expect(page.getByTestId("select-country").locator("option")).toHaveCount(26);
+      await expect.poll(() => page.getByTestId("select-country").locator("option").count()).toBeGreaterThan(250);
       await page.getByTestId("input-name").fill("Automated Demo Order");
       await page.getByTestId("input-email").fill("ui-test@example.test");
       await page.getByTestId("input-phone").fill("00000000");
@@ -112,7 +119,7 @@ for (const lang of ["ar", "en"] as const) {
       await page.getByTestId("radio-pay-stripe").click();
       await page.getByTestId("button-place-order").click();
       await expect(page).toHaveURL(/\/confirmation/);
-      await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sifr.receipt") ?? "{}").shipping)).toBe(8);
+      await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sifr.receipt") ?? "{}").shipping)).toBe(15);
       await page.goto(`/help/tracking?lang=${lang}`);
       await expect(page.getByTestId("card-tracking")).toBeVisible();
       await expect(page.getByTestId("text-tracking-number")).toContainText("SIFR-");

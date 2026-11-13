@@ -85,7 +85,7 @@ export const currencyOptions = [
   ["TND", "د.ت", "Tunisian Dinar", "دينار تونسي"], ["DZD", "د.ج", "Algerian Dinar", "دينار جزائري"],
   ["MAD", "د.م", "Moroccan Dirham", "درهم مغربي"], ["MRU", "أ.م", "Mauritanian Ouguiya", "أوقية موريتانية"],
   ["SOS", "Sh", "Somali Shilling", "شلن صومالي"], ["DJF", "Fdj", "Djiboutian Franc", "فرنك جيبوتي"],
-  ["KMF", "CF", "Comorian Franc", "فرنك قمري"], ["ILS", "₪", "Israeli New Shekel", "شيكل إسرائيلي"],
+  ["KMF", "CF", "Comorian Franc", "فرنك قمري"], ["ILS", "₪", "New Shekel", "شيكل جديد"],
   ["TRY", "₺", "Turkish Lira", "ليرة تركية"], ["RUB", "₽", "Russian Ruble", "روبل روسي"],
   ["USD", "$", "US Dollar", "دولار أمريكي"], ["EUR", "€", "Euro", "يورو"],
 ].map(([code, symbol, en, ar]) => ({ code, symbol, name: l(ar, en) }));
