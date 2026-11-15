@@ -22,3 +22,9 @@ timeoutMs = 20000
 [nix]
 channel = "stable-25_05"
 packages = ["chromium"]
+
+[userenv]
+
+[userenv.shared]
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_f1v0ne2_7tQ2_LofzZEqdQ_4HGb-CrR"
+SUPABASE_URL = "https://nhycctnldabuysgeqgtj.supabase.co"

@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { db, storeRequests } from "@workspace/db";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import {
   ListBooksResponse, CreateOrderBody, CreateOrderResponse,
@@ -12,6 +11,7 @@ import { destinations, estimateShipping, storeSettings } from "@workspace/sifr-d
 import { demoPaymentAdapter } from "../lib/payments";
 import { getCountries, getVisitorCountry } from "../lib/countries";
 import { getKwdRates } from "../lib/exchange-rates";
+import { saveSifrRequest } from "../lib/supabase";
 
 const router: IRouter = Router();
 const windows = new Map<string, { count: number; until: number }>();
@@ -67,7 +67,13 @@ router.post("/orders", async (req, res): Promise<void> => {
   const shipping = shippingEstimate.amountKwd;
   const payment = await demoPaymentAdapter.confirm(input.paymentMethod);
   const confirmation = CreateOrderResponse.parse({ ...payment, subtotal, shipping, shippingEstimate, total: (fils + shipping * 1000) / 1000 });
-  await db.insert(storeRequests).values({ id: payment.orderNumber, kind: "demo_order", payload: { ...input, confirmation } });
+  try {
+    await saveSifrRequest({ id: payment.orderNumber, kind: "demo_order", payload: { ...input, confirmation } });
+  } catch (error) {
+    req.log.error({ err: error }, "Failed to save demo order to Supabase");
+    res.status(503).json({ error: "Order storage is temporarily unavailable." });
+    return;
+  }
   res.status(201).json(confirmation);
 });
 
@@ -80,7 +86,13 @@ router.post("/quotes", async (req, res): Promise<void> => {
     : /^\+?[\d\s()-]{7,25}$/.test(contact);
   if (!validContact) { res.status(400).json({ error: "Invalid contact details for the selected method." }); return; }
   const reference = `PARTNER-${randomUUID().slice(0, 8).toUpperCase()}`;
-  await db.insert(storeRequests).values({ id: reference, kind: "partnership", payload: parsed.data });
+  try {
+    await saveSifrRequest({ id: reference, kind: "partnership", payload: parsed.data });
+  } catch (error) {
+    req.log.error({ err: error }, "Failed to save partnership request to Supabase");
+    res.status(503).json({ error: "Request storage is temporarily unavailable." });
+    return;
+  }
   res.status(201).json(CreateQuoteResponse.parse({ reference }));
 });
 
@@ -88,7 +100,13 @@ router.post("/newsletter", async (req, res): Promise<void> => {
   const parsed = SubscribeNewsletterBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "Invalid email." }); return; }
   const reference = `NEWS-${randomUUID().slice(0, 8).toUpperCase()}`;
-  await db.insert(storeRequests).values({ id: reference, kind: "newsletter", payload: { ...parsed.data, deliveryConnected: false } });
+  try {
+    await saveSifrRequest({ id: reference, kind: "newsletter", payload: { ...parsed.data, deliveryConnected: false } });
+  } catch (error) {
+    req.log.error({ err: error }, "Failed to save newsletter subscription to Supabase");
+    res.status(503).json({ error: "Subscription storage is temporarily unavailable." });
+    return;
+  }
   res.status(201).json(SubscribeNewsletterResponse.parse({ reference }));
 });
 
