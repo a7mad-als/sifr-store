@@ -1,2 +1,3 @@
 - [Sifr product boundaries](sifr-product.md) — bilingual Islamic bookshop; simulated payments and catalogue-only AI advice, never fatwas.
 - [Sifr Supabase access](sifr-supabase.md) — public publishable key writes are limited by RLS; production hardening may require a server secret.
+- [Sifr Vercel deployment](sifr-vercel.md) — Vercel needs its own environment values; Replit AI integration credentials do not transfer automatically.
