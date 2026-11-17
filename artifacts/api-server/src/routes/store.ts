@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { getOpenAIClient } from "@workspace/integrations-openai-ai-server";
 import {
   ListBooksResponse, CreateOrderBody, CreateOrderResponse,
   CreateQuoteBody, CreateQuoteResponse, AskAssistantBody, AskAssistantResponse,
@@ -114,7 +114,7 @@ router.post("/openai/assistant", async (req, res): Promise<void> => {
   const parsed = AskAssistantBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "Invalid message." }); return; }
   try {
-    const result = await openai.chat.completions.create({
+    const result = await getOpenAIClient().chat.completions.create({
       model: "gpt-5.4-mini",
       max_completion_tokens: 8192,
       messages: [

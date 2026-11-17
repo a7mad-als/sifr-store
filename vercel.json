@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm run vercel:build",
+  "outputDirectory": "public",
+  "functions": {
+    "app.mts": {
+      "includeFiles": ["public/index.html"]
+    }
+  }
+}
