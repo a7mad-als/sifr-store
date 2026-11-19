@@ -11,7 +11,7 @@ import { destinations, estimateShipping, storeSettings } from "@workspace/sifr-d
 import { demoPaymentAdapter } from "../lib/payments";
 import { getCountries, getVisitorCountry } from "../lib/countries";
 import { getKwdRates } from "../lib/exchange-rates";
-import { saveSifrRequest } from "../lib/supabase";
+import { saveOrder, saveSifrRequest } from "../lib/supabase";
 
 const router: IRouter = Router();
 const windows = new Map<string, { count: number; until: number }>();
@@ -67,10 +67,30 @@ router.post("/orders", async (req, res): Promise<void> => {
   const shipping = shippingEstimate.amountKwd;
   const payment = await demoPaymentAdapter.confirm(input.paymentMethod);
   const confirmation = CreateOrderResponse.parse({ ...payment, subtotal, shipping, shippingEstimate, total: (fils + shipping * 1000) / 1000 });
+  // Payment succeeded above; now persist the order in the `orders` table.
   try {
-    await saveSifrRequest({ id: payment.orderNumber, kind: "demo_order", payload: { ...input, confirmation } });
+    await saveOrder({
+      order_number: payment.orderNumber,
+      customer_name: input.name,
+      email: input.email,
+      phone: input.phone,
+      country: input.country,
+      city: input.city,
+      address: input.address,
+      payment_method: input.paymentMethod,
+      payment_status: "paid",
+      items: input.items.map(item => {
+        const book = books.find(book => book.id === item.bookId)!;
+        return { bookId: book.id, title: book.title.ar, quantity: item.quantity, unitPrice: book.price };
+      }),
+      subtotal: confirmation.subtotal,
+      shipping: confirmation.shipping,
+      total: confirmation.total,
+      currency: "KWD",
+      demo: payment.demo,
+    });
   } catch (error) {
-    req.log.error({ err: error }, "Failed to save demo order to Supabase");
+    req.log.error({ err: error }, "Failed to save order to Supabase orders table");
     res.status(503).json({ error: "Order storage is temporarily unavailable." });
     return;
   }

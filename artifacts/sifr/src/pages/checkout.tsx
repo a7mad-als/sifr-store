@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Check, ShieldAlert, ShoppingBag } from 'lucide-react';
-import { useCreateOrder, type Book } from '@workspace/api-client-react';
+import { Check, CheckCircle2, ShieldAlert, ShoppingBag } from 'lucide-react';
+import { useCreateOrder, type Book, type OrderConfirmation } from '@workspace/api-client-react';
 import { BookCover } from '@/components/brand';
 import { useBooksById } from '@/components/shell';
 import { formatNum, useI18n, type TKey } from '@/lib/i18n';
@@ -36,6 +36,7 @@ export default function Checkout() {
   const [errs, setErrs] = useState<Errs>({});
   const [pm, setPm] = useState<PaymentMethod>('knet');
   const [failed, setFailed] = useState(false);
+  const [paid, setPaid] = useState<OrderConfirmation | null>(null);
 
   const lines = Object.entries(cart).map(([id, qty]) => ({ book: byId.get(Number(id)), qty, id: Number(id) }));
   const known = lines.filter((l): l is { book: Book; qty: number; id: number } => !!l.book);
@@ -73,8 +74,10 @@ export default function Checkout() {
       });
       await getAdapter(pm).authorize({ orderNumber: res.orderNumber, total: res.total });
       localStorage.setItem(RECEIPT_KEY, JSON.stringify({ ...res, paymentMethod: pm, placedAt: new Date().toISOString() }));
+      // Show the success message in place — no page reload, no navigation.
+      setPaid(res);
       clear();
-      setLocation('/confirmation');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       setFailed(true);
     }
@@ -96,6 +99,27 @@ export default function Checkout() {
       })}
     </ol>
   );
+
+  if (paid) {
+    return (
+      <>
+        <DemoBanner />
+        <div className="mx-auto flex max-w-xl flex-col items-center px-5 py-24 text-center" role="status" aria-live="polite" data-testid="status-payment-success">
+          <div className="rise grid h-24 w-24 place-items-center rounded-full bg-emerald-600 text-white shadow-lg">
+            <CheckCircle2 className="h-12 w-12" />
+          </div>
+          <h1 className="rise mt-8 text-4xl font-semibold text-emerald-700" data-testid="text-payment-success">{t('co.paid')}</h1>
+          <p className="mt-4 font-light text-muted-foreground">{t('co.paidBody')}</p>
+          <p className="mt-2 font-mono text-2xl tracking-wider text-[#B8893B]" dir="ltr" data-testid="text-paid-order-number">{paid.orderNumber}</p>
+          <p className="mt-4 text-lg tabular-nums">{t('co.total')}: {formatPrice(paid.total)}</p>
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <button type="button" onClick={() => setLocation('/confirmation')} className="border border-[#1B2A41]/30 px-6 py-3 text-sm transition-colors hover:border-[#1B2A41]" data-testid="button-view-receipt">{t('co.receipt')}</button>
+            <Link href="/" className="bg-[#1B2A41] px-6 py-3 text-sm text-[#F6F1E7] transition-colors hover:bg-[#B8893B] hover:text-[#1B2A41]" data-testid="link-paid-continue">{t('co.toShop')}</Link>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (known.length === 0) {
     return (

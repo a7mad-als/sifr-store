@@ -44000,6 +44000,27 @@ async function saveSifrRequest(request) {
     throw new Error(`Supabase rejected the request with status ${response.status}.`);
   }
 }
+async function saveOrder(order) {
+  const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, "");
+  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !publishableKey) {
+    throw new Error("Supabase connection is not configured.");
+  }
+  const response = await fetch(`${supabaseUrl}/rest/v1/orders`, {
+    method: "POST",
+    headers: {
+      apikey: publishableKey,
+      "content-type": "application/json",
+      prefer: "return=minimal"
+    },
+    body: JSON.stringify(order),
+    signal: AbortSignal.timeout(1e4)
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Supabase rejected the order with status ${response.status}: ${detail.slice(0, 300)}`);
+  }
+}
 
 // artifacts/api-server/src/routes/store.ts
 var router2 = (0, import_express2.Router)();
@@ -44074,9 +44095,28 @@ router2.post("/orders", async (req, res) => {
   const payment = await demoPaymentAdapter.confirm(input.paymentMethod);
   const confirmation = CreateOrderResponse.parse({ ...payment, subtotal, shipping, shippingEstimate, total: (fils + shipping * 1e3) / 1e3 });
   try {
-    await saveSifrRequest({ id: payment.orderNumber, kind: "demo_order", payload: { ...input, confirmation } });
+    await saveOrder({
+      order_number: payment.orderNumber,
+      customer_name: input.name,
+      email: input.email,
+      phone: input.phone,
+      country: input.country,
+      city: input.city,
+      address: input.address,
+      payment_method: input.paymentMethod,
+      payment_status: "paid",
+      items: input.items.map((item) => {
+        const book2 = books.find((book3) => book3.id === item.bookId);
+        return { bookId: book2.id, title: book2.title.ar, quantity: item.quantity, unitPrice: book2.price };
+      }),
+      subtotal: confirmation.subtotal,
+      shipping: confirmation.shipping,
+      total: confirmation.total,
+      currency: "KWD",
+      demo: payment.demo
+    });
   } catch (error) {
-    req.log.error({ err: error }, "Failed to save demo order to Supabase");
+    req.log.error({ err: error }, "Failed to save order to Supabase orders table");
     res.status(503).json({ error: "Order storage is temporarily unavailable." });
     return;
   }
