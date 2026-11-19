@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { getOpenAIClient } from "@workspace/integrations-openai-ai-server";
+import { getOpenAIClient } from "@workspace/integrations-openai-ai-server/client";
 import {
   ListBooksResponse, CreateOrderBody, CreateOrderResponse,
   CreateQuoteBody, CreateQuoteResponse, AskAssistantBody, AskAssistantResponse,
