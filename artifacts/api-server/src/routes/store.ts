@@ -90,7 +90,14 @@ router.post("/orders", async (req, res): Promise<void> => {
       demo: payment.demo,
     });
   } catch (error) {
-    req.log.error({ err: error }, "Failed to save order to Supabase orders table");
+    req.log.error({ err: error }, "Failed to save order to Supabase orders table; falling back to sifr_requests");
+    try {
+      await saveSifrRequest({ id: payment.orderNumber, kind: "demo_order", payload: { ...input, confirmation } });
+      res.status(201).json(confirmation);
+      return;
+    } catch (fallbackError) {
+      req.log.error({ err: fallbackError }, "Fallback save to sifr_requests also failed");
+    }
     res.status(503).json({ error: "Order storage is temporarily unavailable." });
     return;
   }
